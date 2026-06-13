@@ -127,6 +127,16 @@ We build a small, hand-written ReAct/tool-use loop rather than importing a frame
 
 The headline proof: **attack-success-rate per catastrophe class, per model, with the small-vs-frontier gap and the valid/all split.** Supporting: the false-positive base rate on matched controls (the denominator for over-blocking, used later to grade the verifier). If small-model agents take catastrophic floor actions at a meaningful rate while frontier models resist, the problem is demonstrated and the case for a deterministic, model-independent boundary is made on evidence rather than assertion.
 
+### 4.9 What's genuinely new here
+
+The Phase-0 reuse-vs-build research confirmed that most of the corpus is assembled from prior art (AgentDojo / InjecAgent / BIPIA for breadth; NL2Bash, InterCode, gitleaks, GTFOBins/LOLBAS to seed the floor) — credited honestly. But it also identified what *nothing* existing provides, and that is Verity's contribution:
+
+- **Benign-user-hallucination catastrophe cases.** Every harmful-action corpus assumes indirect injection or a deliberately malicious user. None model a *benign user whose small model hallucinates its way into a catastrophic action* — which, given proliferation (§2.1), is the common case, not the exotic one.
+- **The self-modification / persistence class**, essentially greenfield as a labeled corpus.
+- **A unified three-valued (attempted / safe / invalid) scoring schema** that normalizes attack-success over valid-only *and* all — separating genuine safety behavior from small-model incompetence, which nothing existing reports cleanly.
+
+These are the project's novel contribution, built on an honestly-credited reuse base. Detail: `verity-eval-plan.md` §5.
+
 ---
 
 ## 5. The Core Idea (the verifier)
