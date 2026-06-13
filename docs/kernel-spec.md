@@ -335,7 +335,7 @@ After M7 every later layer attaches to a seam already present: the `Context` tra
 | Kernel piece | Grows into |
 |---|---|
 | `verify → Verdict` (no enforcement) | The `if`-condition; the adapter wires the body to the harness's controls |
-| `effect: [...]` + effect-category policy | The catastrophe floor; effect ontology over Strata's graph |
+| `effect: [...]` + effect-category policy | The catastrophe floor; the effect ontology |
 | `{ "ctx": ... }` + `Context` trait | Live context + provenance adapters; cumulative aggregates |
 | Named predicates (`is_secret`, `is_external`) | The semantic command resolver (defeating lexical bypass, PRD OQ6) |
 | Provenance-aware envelopes | The lethal-trifecta floor; learned per-user boundaries |

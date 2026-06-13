@@ -45,7 +45,16 @@ A deterministic verification layer for autonomous AI agents — a model-independ
 - **Verdict model:** `Conform` / `Violate(+pathway)` / `Indeterminate(→escalate)`.
 - **Two hard requirements:** provenance/taint-awareness (against the confused deputy) + atomic resolved-action verification (TOCTOU-free, the seccomp lesson). The corpus encodes taint on untrusted inputs from day one.
 - **Assurance, not assumption:** every verdict states what the chokepoint actually provided (atomicity, provenance, resolution, context-completeness). Provenance-dependent policy with no taint → `Indeterminate → escalate`, never a silent allow.
-- **Two stores, clear ownership:** Verity's own data layer (**StrataDB**) holds policies, simulation, encode-time inference, relationships; the **harness memory** holds the *agent's* world state — Verity reads it as context, never stores it.
+- **Ownership boundary:** Verity owns its compiled policies (JSON, **versioned in git**); the **harness memory** holds the *agent's* world state — Verity reads it as context, never stores it. No separate data layer.
+
+## Stack (settled)
+
+- **Runtime verifier** = `verity-core`, a small **Rust** crate (`serde` only; no Z3, no LLM, no async) — a tiny, auditable TCB; no GC → predictable hot-path latency.
+- **Bindings** from one audited core: **PyO3 first** (Python is where most agents live, incl. small autonomous ones; the eval harness is the first consumer), **WASM/napi for TS** later. Ship **prebuilt wheels/packages** → `pip install`, no toolchain.
+- **Encode-time compiler** = **Python** (LLM + Z3), emits the compiled-policy JSON the core reads. Z3 never touches the runtime.
+- **Eval harness (Phase 0)** = **Python** (vLLM/llama.cpp + ReAct loop), the first consumer of `verity-core`.
+- **Policies** = **JSON, versioned in git** — no separate data layer.
+- **Repo** = one **polyglot monorepo**: `crates/verity-core` + `crates/verity-py`, `encode/`, `eval/`, `policies/`, `docs/`.
 
 ## What it catches
 

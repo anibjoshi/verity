@@ -200,12 +200,12 @@ The verdict is the entire output. On `Violate`, the `pathway` is the actionable 
 
 ### 8.4 Two stores, clear ownership
 
-- **Verity's data layer (StrataDB)** holds Verity's own machinery: compiled policies (versioned, branchable), simulation (forking state to run adversarial pathways), trusted encode-time inference, and the relationship graph the verifier consults.
+- **Verity's own artifacts** — the compiled policies — are JSON files **versioned in git** (which gives versioning *and* branching for free); the runtime loads them into memory at startup. There is no separate data layer in the runtime or the early phases. Heavier encode-time machinery (simulation/forking, a relationship graph, learned-personalization state) belongs to those later phases and chooses its own storage then.
 - **The harness's memory** holds the *agent's* external/world state. Verity **reads** it as context; it does **not** store or duplicate it.
 
 ### 8.5 Implementation stack (leading hypothesis, partly open)
 
-A deterministic runtime verifier — `verity-core`, a compact engine in Rust (with bindings if the integration needs them); Z3 for encode-time reasoning; StrataDB as Verity's own data layer. The corpus harness (§4.6) is a separate, lighter component (small models + a ReAct loop) and is built first.
+**The runtime** is `verity-core`, a small Rust crate (`serde` only — no Z3, no LLM, no async; a tiny auditable TCB, and no GC means predictable hot-path latency), exposed to the agent ecosystem through bindings from a single audited core: **PyO3 first** (Python is where most agents live, especially the small autonomous ones — and our own eval harness is the first consumer), with **WASM/napi for TypeScript** later, shipped as **prebuilt wheels/packages** so adoption is `pip install` with no toolchain. **Encode-time** is a separate **Python** tool (LLM + Z3) that emits the compiled-policy JSON the core reads — Z3 never touches the runtime. **Policies are JSON, versioned in git** (no separate data layer). Everything lives in **one polyglot monorepo** — `crates/verity-core` + `crates/verity-py`, `encode/`, `eval/`, `policies/`, `docs/`; the Phase 0 corpus harness (§4.6) is Python and is built first.
 
 ### 8.6 Two hard requirements: provenance and atomicity
 
