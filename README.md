@@ -74,8 +74,13 @@ Early — evidence-first. The thesis, architecture, and a primary-source threat 
 ## Repository
 
 - [`docs/product/verity-prd.md`](docs/product/verity-prd.md) — the product requirements and design (canonical).
-- [`docs/kernel-spec.md`](docs/kernel-spec.md) — the buildable spec for the smallest verification kernel.
+- [`docs/product/verity-execution-plan.md`](docs/product/verity-execution-plan.md) — the step-by-step build plan, with an exit gate per step.
+- [`docs/product/verity-eval-plan.md`](docs/product/verity-eval-plan.md) — Phase 0 evaluation corpus & benchmark plan.
+- [`docs/product/verity-corpus-spec.md`](docs/product/verity-corpus-spec.md) — the scenario schema and seed set (E0).
+- [`docs/product/verity-testing-ci-plan.md`](docs/product/verity-testing-ci-plan.md) — testing & CI plan for the library.
+- [`docs/kernel-spec.md`](docs/kernel-spec.md) — the buildable spec for the verification kernel (`verity-core`).
 - [`docs/verity-agent-action-verification.md`](docs/verity-agent-action-verification.md) — cited research: the threat landscape, why current defenses are insufficient, and the systems-security precedent (seccomp, SELinux, capabilities, seL4, Zelkova).
+- [`docs/research/`](docs/research/) — the eval-plan deep-research prompt and findings.
 
 ## Non-goals
 
