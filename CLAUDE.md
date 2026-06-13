@@ -70,6 +70,6 @@ OpenClaw is the lead: its `before_tool_call` hook is veto-capable and atomic on 
 - **Skip the business shell** (pricing, SaaS, GTM, multi-tenancy) — not the point.
 - **Product thinking and docs come first** — update the PRD to reflect direction before building against it.
 
-## Heritage & naming
+## Naming
 
-Named **Verity** (truth / verify / verdict). The separate Python rule engine in `~/Documents/GitHub/symbolica` keeps the name "Symbolica" — a different, earlier project for a different use case. Earlier exploration (done under the Symbolica name, startup-framed) now lives in the symbolica repo (`~/Documents/GitHub/symbolica/docs/archive/`), moved out of this repo. Nothing from Symbolica is carried into Verity; the clean break is deliberate.
+Named **Verity** (truth / verify / verdict) — the deterministic source of truth about whether an agent action is safe. The verification engine is the `verity-core` crate.

@@ -301,4 +301,4 @@ The build is the point; the corpus comes first so every later claim has a number
 
 ## 14. Naming
 
-The product is named **Verity** — the deterministic source of truth about whether an agent action is safe. Verity's verification engine is the **`verity-core`** crate. "Symbolica" was a separate, earlier project — a Python rule engine in a different repository, built for decision automation rather than safety verification; nothing from it is carried into Verity. The clean break is deliberate.
+The product is named **Verity** — the deterministic source of truth about whether an agent action is safe. Verity's verification engine is the **`verity-core`** crate.
