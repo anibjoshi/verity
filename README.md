@@ -76,7 +76,6 @@ Early — evidence-first. The thesis, architecture, and a primary-source threat 
 - [`docs/product/verity-prd.md`](docs/product/verity-prd.md) — the product requirements and design (canonical).
 - [`docs/kernel-spec.md`](docs/kernel-spec.md) — the buildable spec for the smallest verification kernel.
 - [`docs/verity-agent-action-verification.md`](docs/verity-agent-action-verification.md) — cited research: the threat landscape, why current defenses are insufficient, and the systems-security precedent (seccomp, SELinux, capabilities, seL4, Zelkova).
-- [`docs/archive/`](docs/archive/) — earlier exploration.
 
 ## Non-goals
 

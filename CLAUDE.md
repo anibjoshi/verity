@@ -72,4 +72,4 @@ OpenClaw is the lead: its `before_tool_call` hook is veto-capable and atomic on 
 
 ## Heritage & naming
 
-Named **Verity** (truth / verify / verdict). The separate Python rule engine in `~/Documents/GitHub/symbolica` keeps the name "Symbolica" — a different, earlier project for a different use case. Earlier exploration (done under the Symbolica name, startup-framed) is in `docs/archive/`. Nothing from Symbolica is carried into Verity; the clean break is deliberate.
+Named **Verity** (truth / verify / verdict). The separate Python rule engine in `~/Documents/GitHub/symbolica` keeps the name "Symbolica" — a different, earlier project for a different use case. Earlier exploration (done under the Symbolica name, startup-framed) now lives in the symbolica repo (`~/Documents/GitHub/symbolica/docs/archive/`), moved out of this repo. Nothing from Symbolica is carried into Verity; the clean break is deliberate.
