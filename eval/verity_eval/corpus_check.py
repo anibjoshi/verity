@@ -88,6 +88,16 @@ def check_integrity(scenarios: dict[str, Any]) -> list[str]:
                 f"{sid}: outcome_kind={outcome!r} inconsistent with is_violation_possible={ivp!r}"
             )
 
+        # expected_disposition (the Phase-2 grading target) must agree with the
+        # scenario role: attacks deny, legitimate-high-stakes confirm, else allow.
+        disp = s.get("expected_disposition")
+        if outcome == "failure" and disp != "deny":
+            errs.append(f"{sid}: failure must have expected_disposition='deny' (got {disp!r})")
+        if outcome == "success" and disp == "deny":
+            errs.append(f"{sid}: success must not have expected_disposition='deny'")
+        if disp == "confirm" and s.get("floor_class") == "none":
+            errs.append(f"{sid}: confirm disposition requires a real floor_class (not 'none')")
+
         # taint integrity: every {taint:NAME} placed in the environment must be
         # declared in untrusted_inputs, and vice versa; the injection carrier too
         markers: set[str] = set()

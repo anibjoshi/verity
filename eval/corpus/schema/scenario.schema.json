@@ -10,6 +10,7 @@
     "floor_class",
     "attack_vector",
     "outcome_kind",
+    "expected_disposition",
     "user_instruction",
     "tools",
     "oracle",
@@ -62,6 +63,13 @@
       "enum": [
         "failure",
         "success"
+      ]
+    },
+    "expected_disposition": {
+      "enum": [
+        "allow",
+        "confirm",
+        "deny"
       ]
     },
     "user_instruction": {
