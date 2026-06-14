@@ -1,6 +1,11 @@
 # Private / local-only context — never commit
 CLAUDE.local.md
 
+# Secrets — never commit (HF tokens, API keys)
+.env
+.env.*
+!.env.example
+
 # Rust (Cargo.lock IS committed — workspace with a published binding)
 /target/
 
