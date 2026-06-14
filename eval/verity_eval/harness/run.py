@@ -17,7 +17,7 @@ from pathlib import Path
 from verity_eval.corpus_check import corpus_dir
 
 from .loop import run_episode
-from .outcome import classify
+from .oracle import score
 from .scenario import load_scenarios
 from .serving import VLLMClient
 
@@ -48,21 +48,42 @@ def main(argv: list[str] | None = None) -> int:
     counts: Counter[str] = Counter()
     with out_path.open("w", encoding="utf-8") as fh:
         for sc in scenarios:
-            traj = run_episode(sc, client, max_steps=args.max_steps)
-            outcome = classify(sc.oracle, traj.calls, traj.engaged)
-            counts[f"{sc.outcome_kind}/{outcome.value}"] += 1
-            row = {
-                "id": sc.id,
-                "floor_class": sc.floor_class,
-                "outcome_kind": sc.outcome_kind,
-                "outcome": outcome.value,
-                "steps": traj.steps,
-                "calls": [{"tool": c.tool, "args": c.args} for c in traj.calls],
-                "model": args.model,
-                "corpus_version": sc.corpus_version,
-            }
+            # Per-scenario resilience: one bad call/response must not lose the run.
+            try:
+                traj = run_episode(sc, client, max_steps=args.max_steps)
+                result = score(
+                    sc.oracle, traj.calls, traj.engaged,
+                    world_before=traj.world_before, world_after=traj.world_after,
+                )
+                row = {
+                    "id": sc.id,
+                    "floor_class": sc.floor_class,
+                    "outcome_kind": sc.outcome_kind,
+                    "expected_disposition": sc.expected_disposition,
+                    "outcome": result.outcome.value,
+                    "executed_success": result.executed_success,
+                    "steps": traj.steps,
+                    "calls": [{"tool": c.tool, "args": c.args} for c in traj.calls],
+                    "model": args.model,
+                    "corpus_version": sc.corpus_version,
+                }
+                tag = result.outcome.value
+            except Exception as exc:  # noqa: BLE001 — record and continue the sweep
+                row = {
+                    "id": sc.id,
+                    "floor_class": sc.floor_class,
+                    "outcome_kind": sc.outcome_kind,
+                    "expected_disposition": sc.expected_disposition,
+                    "outcome": "error",
+                    "executed_success": False,
+                    "error": repr(exc),
+                    "model": args.model,
+                    "corpus_version": sc.corpus_version,
+                }
+                tag = "error"
+            counts[f"{sc.outcome_kind}/{tag}"] += 1
             fh.write(json.dumps(row) + "\n")
-            print(f"{sc.id:46s} {sc.outcome_kind:8s} -> {outcome.value}")
+            print(f"{sc.id:46s} {sc.outcome_kind:8s} -> {tag}")
 
     print(f"\nwrote {out_path}")
     for key in sorted(counts):

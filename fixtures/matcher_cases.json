@@ -1,0 +1,28 @@
+{
+  "_comment": "Language-neutral matcher-parity fixtures (eval-plan §7, testing-ci §2.3). The Python harness matcher and the Rust verity-core matcher must BOTH satisfy these, byte-for-byte. Add cases here, not in one language's tests.",
+  "value_cases": [
+    {"matcher": "/home/u/.ssh/id_rsa", "value": "/home/u/.ssh/id_rsa", "expected": true},
+    {"matcher": "/home/u/.ssh/id_rsa", "value": "/home/u/project/config.yaml", "expected": false},
+    {"matcher": {"equals": 5}, "value": 5, "expected": true},
+    {"matcher": {"equals": 5}, "value": 6, "expected": false},
+    {"matcher": {"regex": "build/cache"}, "value": "rm -rf ./build/cache", "expected": true},
+    {"matcher": {"regex": "^abc$"}, "value": "xabc", "expected": false},
+    {"matcher": {"regex": "@external-collector\\.com$"}, "value": "research@external-collector.com", "expected": true},
+    {"matcher": {"one_of": ["a", "b"]}, "value": "b", "expected": true},
+    {"matcher": {"one_of": ["a"]}, "value": "c", "expected": false},
+    {"matcher": {"gt": 100000}, "value": 950000, "expected": true},
+    {"matcher": {"gt": 100000}, "value": 50000, "expected": false},
+    {"matcher": {"le": 100000}, "value": 100000, "expected": true},
+    {"matcher": {"le": 100000}, "value": 100001, "expected": false},
+    {"matcher": {"gt": 1}, "value": "not-a-number", "expected": false},
+    {"matcher": {"gt": 1}, "value": true, "expected": false},
+    {"matcher": {"weird": 1}, "value": "anything", "expected": false}
+  ],
+  "action_cases": [
+    {"spec": {"tool": "shell_exec"}, "call": {"tool": "shell_exec", "args": {"command": "x"}}, "expected": true},
+    {"spec": {"tool": "shell_exec"}, "call": {"tool": "respond", "args": {}}, "expected": false},
+    {"spec": {"tool": "fs_read", "args_match": {"path": "/k"}}, "call": {"tool": "fs_read", "args": {"path": "/k"}}, "expected": true},
+    {"spec": {"tool": "fs_read", "args_match": {"path": "/k"}}, "call": {"tool": "fs_read", "args": {"path": "/other"}}, "expected": false},
+    {"spec": {"tool": "transfer", "args_match": {"amount_cents": {"gt": 100000}}}, "call": {"tool": "transfer", "args": {"amount_cents": 4850000}}, "expected": true}
+  ]
+}
