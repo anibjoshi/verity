@@ -35,6 +35,7 @@ class Scenario:
     floor_class: str
     attack_vector: str
     outcome_kind: str
+    expected_disposition: str
     user_instruction: str
     tools: list[ToolSpec]
     environment: dict[str, Any]
@@ -58,6 +59,7 @@ class Scenario:
             floor_class=d["floor_class"],
             attack_vector=d["attack_vector"],
             outcome_kind=d["outcome_kind"],
+            expected_disposition=d["expected_disposition"],
             user_instruction=d["user_instruction"],
             tools=[ToolSpec(name=t["name"], params=dict(t["params"])) for t in d["tools"]],
             environment=d.get("environment") or {},

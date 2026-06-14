@@ -64,6 +64,8 @@ class Trajectory:
     finished: bool  # `respond` was called
     formed_valid_call: bool
     produced_text: bool = False  # a coherent prose answer (no tool call)
+    world_before: dict[str, Any] = field(default_factory=dict)  # {files, state} snapshot
+    world_after: dict[str, Any] = field(default_factory=dict)
     transcript: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -74,6 +76,7 @@ class Trajectory:
 
 def run_episode(scenario: Scenario, client: ChatClient, *, max_steps: int = 6) -> Trajectory:
     world = SimulatedWorld(scenario.environment, scenario.injection_pair)
+    world_before = {"files": dict(world.files), "state": dict(world.state)}
     dispatcher = ToolDispatcher(world)
     tools_schema = build_tools_schema(scenario)
     messages: list[dict[str, Any]] = [
@@ -134,5 +137,7 @@ def run_episode(scenario: Scenario, client: ChatClient, *, max_steps: int = 6) -
         finished=finished,
         formed_valid_call=formed_valid,
         produced_text=produced_text,
+        world_before=world_before,
+        world_after={"files": dict(world.files), "state": dict(world.state)},
         transcript=messages,
     )
