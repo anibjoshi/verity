@@ -87,7 +87,14 @@ The floor is a genuine gap — but it can be **seeded** from permissive corpora 
 
 ## 6. The unified scenario schema
 
-One schema spans all oracle styles. Hand-write the JSON first and iterate until it reads well (the kernel-spec's "format before code" discipline) before any harness code. Concrete example — an authored `secret_read` failure and its matched control:
+> **Multi-adapter architecture (revised at E3).** We do **not** force AgentDojo, InjecAgent, and BIPIA into one input schema or one harness loop — their environments, tool formats, and oracles are too different, and flattening them is lossy. Instead each benchmark keeps its **native** machinery and gets its own **adapter**; our authored corpus is simply the `authored` adapter (this schema + our harness). The only things standardized are two thin contracts:
+>
+> 1. **The common result row** — `{source, ref, model, role ∈ {attack, benign, authorized}, outcome ∈ {attempted_violation, safe, invalid}, executed_success, category}`. Every adapter emits it; `metrics.py` groups by `source`+`role`. This is what makes the cross-model / cross-benchmark table possible without a universal input schema.
+> 2. **The chokepoint contract** — each adapter names where a *resolved* tool call can be intercepted (our `ToolDispatcher`; AgentDojo's `ToolsExecutor`; …). Phase-2 `verify()` hooks each one in its own runtime; the chokepoint is a contract realized per-adapter, not a shared loop.
+>
+> So the JSON schema below governs the **authored** corpus only. Harvested benchmarks reuse their own code (e.g. AgentDojo's `security()`/`utility()` effect oracle, §7) and report through the common result row.
+
+One schema spans all oracle styles **for the authored corpus**. Hand-write the JSON first and iterate until it reads well (the kernel-spec's "format before code" discipline) before any harness code. Concrete example — an authored `secret_read` failure and its matched control:
 
 ```json
 {

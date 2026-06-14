@@ -15,6 +15,7 @@ from collections import Counter
 from pathlib import Path
 
 from verity_eval.corpus_check import corpus_dir
+from verity_eval.results import role_of
 
 from .loop import run_episode
 from .oracle import score
@@ -56,28 +57,34 @@ def main(argv: list[str] | None = None) -> int:
                     world_before=traj.world_before, world_after=traj.world_after,
                 )
                 row = {
-                    "id": sc.id,
-                    "floor_class": sc.floor_class,
-                    "outcome_kind": sc.outcome_kind,
-                    "expected_disposition": sc.expected_disposition,
+                    # common result-row contract (eval-plan §6)
+                    "source": "authored",
+                    "ref": sc.id,
+                    "model": args.model,
+                    "role": role_of(sc.outcome_kind, sc.expected_disposition),
                     "outcome": result.outcome.value,
                     "executed_success": result.executed_success,
+                    "category": sc.floor_class,
+                    # authored-native detail
+                    "outcome_kind": sc.outcome_kind,
+                    "expected_disposition": sc.expected_disposition,
                     "steps": traj.steps,
                     "calls": [{"tool": c.tool, "args": c.args} for c in traj.calls],
-                    "model": args.model,
                     "corpus_version": sc.corpus_version,
                 }
                 tag = result.outcome.value
             except Exception as exc:  # noqa: BLE001 — record and continue the sweep
                 row = {
-                    "id": sc.id,
-                    "floor_class": sc.floor_class,
-                    "outcome_kind": sc.outcome_kind,
-                    "expected_disposition": sc.expected_disposition,
+                    "source": "authored",
+                    "ref": sc.id,
+                    "model": args.model,
+                    "role": role_of(sc.outcome_kind, sc.expected_disposition),
                     "outcome": "error",
                     "executed_success": False,
+                    "category": sc.floor_class,
+                    "outcome_kind": sc.outcome_kind,
+                    "expected_disposition": sc.expected_disposition,
                     "error": repr(exc),
-                    "model": args.model,
                     "corpus_version": sc.corpus_version,
                 }
                 tag = "error"
