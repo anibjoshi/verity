@@ -1,2 +1,19 @@
 # Private / local-only context — never commit
 CLAUDE.local.md
+
+# Rust (Cargo.lock IS committed — workspace with a published binding)
+/target/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Eval outputs (model sweeps, scores) — never committed; the corpus is
+eval/results/

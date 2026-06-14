@@ -1,0 +1,19 @@
+[package]
+name = "verity-py"
+description = "Python bindings (the `verity` wheel) for the verity-core verification kernel."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+# The importable module is `verity`; a cdylib so Python can load it as an
+# extension module. Real marshaling lands at execution-plan step 1.7.
+name = "verity"
+crate-type = ["cdylib"]
+
+[dependencies]
+verity-core.workspace = true
+pyo3.workspace = true

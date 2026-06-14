@@ -1,0 +1,12 @@
+[package]
+name = "verity-core"
+description = "Deterministic, model-independent reference monitor for autonomous-agent actions — the auditable TCB."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# Intentionally empty at G1. serde joins at kernel-spec M1; nothing else ever does.
+[dependencies]
