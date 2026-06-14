@@ -1,0 +1,18 @@
+# The `verity` wheel — built with maturin from crates/verity-py.
+# Deliberately NOT a uv workspace member yet: it comes online at execution-plan
+# step 1.7, when maturin is added to the dev environment and the bindings ship.
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "verity"
+description = "Deterministic, model-independent verification for autonomous-agent actions."
+requires-python = ">=3.12"
+license = "MIT"
+readme = "../../README.md"
+dynamic = ["version"]
+
+[tool.maturin]
+manifest-path = "Cargo.toml"
+module-name = "verity"

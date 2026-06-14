@@ -1,0 +1,24 @@
+# Verity — Rust workspace (the runtime side of the monorepo).
+# `verity-core` is the auditable TCB; `verity-py` is the PyO3 binding built from it.
+[workspace]
+resolver = "2"
+members = ["crates/verity-core", "crates/verity-py"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+authors = ["Aniruddha Joshi"]
+repository = "https://github.com/anibjoshi/verity"
+rust-version = "1.94"
+
+[workspace.dependencies]
+# Internal
+verity-core = { path = "crates/verity-core" }
+# verity-core's only runtime deps (introduced at kernel-spec M1; declared here so
+# the version is centralized — no member pulls them in yet, so the empty build
+# stays dependency-free).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Bindings
+pyo3 = { version = "0.23", features = ["extension-module"] }
