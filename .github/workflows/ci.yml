@@ -1,0 +1,138 @@
+name: CI
+
+# Path-filtered PR gate for the polyglot monorepo (testing-ci §5). A single
+# required check, `ci-ok`, aggregates the language jobs so a docs-only change
+# skips the Rust/Python matrices yet still reports green.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Decide which language surfaces a change touched. Editing this workflow runs
+  # everything (so the gate itself is always exercised).
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      python: ${{ steps.filter.outputs.python }}
+      corpus: ${{ steps.filter.outputs.corpus }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/ci.yml'
+            python:
+              - 'eval/**'
+              - 'encode/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/ci.yml'
+            corpus:
+              - 'eval/corpus/**'
+              - 'eval/verity_eval/corpus_check.py'
+              - '.github/workflows/ci.yml'
+
+  # The TCB bar. fmt + clippy run now; cargo test is green at 0 tests and
+  # becomes a real gate at kernel M1. cargo-deny (purity bans + supply-chain)
+  # is added at M1 when serde lands and there is code to keep pure.
+  rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pinned toolchain (rust-toolchain.toml)
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: test
+        run: cargo test --all
+
+  python:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: sync (frozen lockfile)
+        run: uv sync --frozen
+      - name: ruff
+        run: uv run ruff check .
+      - name: mypy
+        run: uv run mypy eval/verity_eval encode/verity_encode
+      - name: pytest
+        # No tests until kernel M1 / eval E2. pytest exit code 5 == "no tests
+        # collected" is tolerated; every other nonzero code fails the job.
+        run: |
+          rc=0
+          uv run pytest -q || rc=$?
+          if [ "$rc" -eq 0 ] || [ "$rc" -eq 5 ]; then exit 0; fi
+          exit "$rc"
+
+  # Schema-validates corpus scenarios. Green-when-empty before G3; a real gate
+  # once the schema + seeds are materialized (integrity checks added at G3).
+  corpus:
+    needs: changes
+    if: needs.changes.outputs.corpus == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: sync (frozen lockfile)
+        run: uv sync --frozen
+      - name: validate corpus (schema)
+        run: uv run python -m verity_eval.corpus_check
+
+  # Multi-platform wheel build for the maturin-built `verity` package.
+  # Scaffolding only — enabled at execution-plan step 1.7 (bindings ship).
+  wheels:
+    if: false
+    needs: changes
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - run: echo "wheel build wired at step 1.7 (${{ matrix.os }}, py${{ matrix.python }})"
+
+  # The single required status check. Green unless a job that actually ran
+  # failed; skipped jobs (path-filtered out) are allowed.
+  ci-ok:
+    needs: [changes, rust, python, corpus]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate results
+        run: |
+          echo "rust=${{ needs.rust.result }} python=${{ needs.python.result }} corpus=${{ needs.corpus.result }}"
+          for r in "${{ needs.rust.result }}" "${{ needs.python.result }}" "${{ needs.corpus.result }}"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "a required job failed"; exit 1
+            fi
+          done
+          echo "all good"
