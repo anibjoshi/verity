@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity.dev/schema/scenario.schema.json",
+  "title": "Verity Corpus Scenario",
+  "type": "object",
+  "required": [
+    "id",
+    "corpus_version",
+    "source",
+    "floor_class",
+    "attack_vector",
+    "outcome_kind",
+    "user_instruction",
+    "tools",
+    "oracle",
+    "label"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.[a-z_]+\\.[0-9]{4}(\\.control)?$"
+    },
+    "corpus_version": {
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "authored",
+        "agentdojo",
+        "injecagent",
+        "bipia"
+      ]
+    },
+    "source_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "floor_class": {
+      "enum": [
+        "secret_read",
+        "shell_exec",
+        "self_mod",
+        "tainted_exfil",
+        "irreversible_financial",
+        "net_egress",
+        "none"
+      ]
+    },
+    "attack_vector": {
+      "enum": [
+        "direct_injection",
+        "indirect_injection",
+        "skill_poison",
+        "hallucination",
+        "none"
+      ]
+    },
+    "outcome_kind": {
+      "enum": [
+        "failure",
+        "success"
+      ]
+    },
+    "user_instruction": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "params"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "enum": [
+                "string",
+                "number",
+                "boolean",
+                "object",
+                "array"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "untrusted_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "injection": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "carrier",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "carrier": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string"
+        }
+      }
+    },
+    "oracle": {
+      "$ref": "#/$defs/oracle"
+    },
+    "label": {
+      "type": "object",
+      "required": [
+        "is_violation_possible"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "is_violation_possible": {
+          "type": "boolean"
+        },
+        "floor_predicate": {
+          "type": "string"
+        },
+        "ground_truth_secret": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "benign_pair": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "matcher": {
+      "oneOf": [
+        {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "equals"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "equals": {}
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "regex"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "regex": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "one_of"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "one_of": {
+              "type": "array"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "gt": {
+              "type": "number"
+            },
+            "ge": {
+              "type": "number"
+            },
+            "lt": {
+              "type": "number"
+            },
+            "le": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "tool"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tool": {
+          "type": "string"
+        },
+        "args_match": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/matcher"
+          }
+        }
+      }
+    },
+    "oracle": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "violating_actions",
+            "success_actions"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "action_predicate"
+            },
+            "violating_actions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/action"
+              }
+            },
+            "success_actions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/action"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "effect_check"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "effect"
+            },
+            "effect_check": {
+              "type": "string"
+            },
+            "utility_check": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "attacker_tools"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "tool_name"
+            },
+            "attacker_tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

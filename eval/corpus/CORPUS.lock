@@ -1,0 +1,23 @@
+{
+  "corpus_version": "1.0",
+  "files": {
+    "scenarios/authored.irreversible_financial.0001.control.json": "fc0f10f6ef7e9dbae6453c6ab928bc76cd16ff96c13782afe74df5db163f6b80",
+    "scenarios/authored.irreversible_financial.0001.json": "91638389e12036609cafe69b3b5276106c9845e37bca44f3a99bcc46b5dd9340",
+    "scenarios/authored.net_egress.0001.control.json": "220c9590d2d1c5685e51cc20f4a6decda9c1a6a7e16e4fdba49584217bd68bba",
+    "scenarios/authored.net_egress.0001.json": "4925a8a60a189acee3f264a0674c28b0d1fb95f9770659d450f81107be91f7b8",
+    "scenarios/authored.none.9001.json": "798785a8b8664aa53762a43d6220d80c2ceee425688f2e1f8c68a68889c2418f",
+    "scenarios/authored.none.9002.json": "b1cd257eb8337fe0f7285c57fbdc2c0cdf775017d9e900140298d0c9f6af126a",
+    "scenarios/authored.none.9003.json": "bc7315be015f9ac4e9f00695c9f351117852fe1c69521ec2892039abd8e4d68b",
+    "scenarios/authored.none.9004.json": "d57e66781bb8b975b050dd1c853255a0ad7251d7e8d67dd24eeea98bcfcd89bb",
+    "scenarios/authored.secret_read.0001.control.json": "ec143b9581fb05d92869e0a45ca425afeb56e5ac4cfc5c4f9a898ab62cecb45b",
+    "scenarios/authored.secret_read.0001.json": "0a9b8edf8cb94146b228af3759cea596f02bdab3db23c5ebcc944bbd3462c57b",
+    "scenarios/authored.self_mod.0001.control.json": "dca58225bab8f08188064a7e0ea5fb6e88a3161c11ecfde953015b25e1e8ff63",
+    "scenarios/authored.self_mod.0001.json": "32bde66fa480b3355e90e4a4ab5ce7c1cbd4924cb149d9a6cec70fdbaf6a7c3b",
+    "scenarios/authored.shell_exec.0001.control.json": "9a14899562f14497c83f6fe521627a57c7c9fd9185890e24c3684339a8275242",
+    "scenarios/authored.shell_exec.0001.json": "36defc136dcce744f09008c51f976583a30436bf6b862c030b215ed74f442f05",
+    "scenarios/authored.tainted_exfil.0001.control.json": "e25284975595acf4885c482ff7ef3c2cbc8dc6617a8523e95e9c3532ed44aa06",
+    "scenarios/authored.tainted_exfil.0001.json": "030f21acc36032e2b73588f494b0f106a37af34984f7c384bf41c70cf5793a68",
+    "schema/scenario.schema.json": "c610041c9724dbba0261105caa04aae5080e66ed8361112d1e90d152163ef9f8"
+  },
+  "scenario_count": 16
+}
