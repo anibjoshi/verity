@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 
 from verity_eval.corpus_check import corpus_dir
 from verity_eval.results import ResultRow
@@ -89,6 +90,7 @@ def run_agentdojo(
         run_task_with_injection_tasks,
         run_task_without_injection_tasks,
     )
+    from agentdojo.logging import OutputLogger
     from agentdojo.task_suite.load_suites import get_suites
 
     client = openai.OpenAI(base_url=base_url, api_key="EMPTY")
@@ -99,10 +101,11 @@ def run_agentdojo(
         llm,
         ToolsExecutionLoop([ToolsExecutor(), llm]),
     ])
-    # AgentDojo's attacks key off a *recognized* model name baked into the
-    # pipeline name; "Local model" is the valid generic. The real model id is
-    # recorded independently via the `model` arg on each ResultRow.
-    pipeline.name = "Local model"
+    # AgentDojo's attacks resolve a prose model name by matching a MODEL_NAMES
+    # *key* as a substring of pipeline.name; the key "vllm_parsed" maps to the
+    # generic "Local model". The real model id is recorded separately on each
+    # ResultRow (via the `model` arg), so this internal name doesn't affect labels.
+    pipeline.name = "vllm_parsed"
 
     suite = get_suites(version)[suite_name]
     user_task_ids = list(suite.user_tasks)[:n_user]
@@ -112,21 +115,25 @@ def run_agentdojo(
     benign_utility: dict[str, bool] = {}
     attack_security: dict[tuple[str, str], bool] = {}
     attack_utility: dict[tuple[str, str], bool] = {}
-    for ut_id in user_task_ids:
-        user_task = suite.user_tasks[ut_id]
-        util, _ = run_task_without_injection_tasks(
-            suite, pipeline, user_task, logdir=None, force_rerun=True
-        )
-        benign_utility[ut_id] = bool(util)
-        util_d, sec_d = run_task_with_injection_tasks(
-            suite, pipeline, user_task, attack, logdir=None, force_rerun=True,
-            injection_tasks=injection_task_ids,
-        )
-        for key, val in sec_d.items():
-            attack_security[key] = bool(val)
-        for key, val in util_d.items():
-            attack_utility[key] = bool(val)
-        print(f"  ran {suite_name}/{ut_id}: benign_utility={benign_utility[ut_id]}")
+    # AgentDojo's run_task_* build a TraceLogger that reads logdir from the active
+    # logging context; establish one (a throwaway dir) so it doesn't fall back to
+    # the context-less NullLogger.
+    with tempfile.TemporaryDirectory(prefix="agentdojo_") as logdir, OutputLogger(logdir=logdir):
+        for ut_id in user_task_ids:
+            user_task = suite.user_tasks[ut_id]
+            util, _ = run_task_without_injection_tasks(
+                suite, pipeline, user_task, logdir=None, force_rerun=True
+            )
+            benign_utility[ut_id] = bool(util)
+            util_d, sec_d = run_task_with_injection_tasks(
+                suite, pipeline, user_task, attack, logdir=None, force_rerun=True,
+                injection_tasks=injection_task_ids,
+            )
+            for key, val in sec_d.items():
+                attack_security[key] = bool(val)
+            for key, val in util_d.items():
+                attack_utility[key] = bool(val)
+            print(f"  ran {suite_name}/{ut_id}: benign_utility={benign_utility[ut_id]}")
 
     return rows_from_agentdojo(
         model=model, suite=suite_name,
