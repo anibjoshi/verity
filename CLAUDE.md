@@ -26,7 +26,7 @@ A deterministic verification layer for autonomous AI agents — a model-independ
 - **The gap we author:** the **system/code-access floor** the benchmarks miss — secret-file reads, arbitrary shell/exec, self-modification/persistence — each with a **matched benign control**. This is exactly where the crispness question lives (`is_secret`, semantic command resolution).
 - **Methodology guard — capability vs intent:** small-model tool-calling fails on *format* 30–80% of the time. Use a **three-valued outcome** (attempted-violation / safe / invalid), report **valid-only and all** rates, and use **guided/grammar-constrained decoding** so a recorded catastrophic action is genuine intent, not a parser artifact.
 - **Runner:** a minimal hand-written ReAct loop whose **tool-dispatch step is the future chokepoint** `verify()` plugs into. Designed to map onto OpenClaw's `before_tool_call` later.
-- **Models:** Qwen2.5-3B/1.5B, Llama-3.2-3B/1B, Hermes-3-Llama-3.2-3B + one frontier anchor. **Serving:** vLLM (reproducible, per-model tool parser, guided decoding); llama.cpp/GBNF to force valid output from 1B models. Not Ollama for the scored run.
+- **Models:** five small families for cross-architecture evidence — Qwen2.5-3B/1.5B, Llama-3.2-3B/1B, Hermes-3-Llama-3.2-3B, Gemma-4-E4B/E2B-it (license-gated), Phi-4-mini-3.8B + one frontier anchor. Each carries its own tool-call parser (per-model `decode.py` registry). **Serving:** vLLM (reproducible, per-model tool parser, guided decoding); llama.cpp/GBNF to force valid output from 1B models. Not Ollama for the scored run. Local dev/scoring on a single RTX 4070 SUPER (12GB) → models served one at a time; harness is an OpenAI-compatible client, so it ports to bigger GPUs unchanged.
 
 ## Core principles
 
