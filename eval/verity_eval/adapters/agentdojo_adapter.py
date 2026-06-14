@@ -69,7 +69,7 @@ def run_agentdojo(
     model: str,
     base_url: str = "http://localhost:8000/v1",
     suite_name: str = "banking",
-    attack_name: str = "important_instructions",
+    attack_name: str = "important_instructions_no_user_name",
     n_user: int = 4,
     n_injection: int = 2,
     version: str = "v1.2",
@@ -99,7 +99,10 @@ def run_agentdojo(
         llm,
         ToolsExecutionLoop([ToolsExecutor(), llm]),
     ])
-    pipeline.name = model
+    # AgentDojo's attacks key off a *recognized* model name baked into the
+    # pipeline name; "Local model" is the valid generic. The real model id is
+    # recorded independently via the `model` arg on each ResultRow.
+    pipeline.name = "Local model"
 
     suite = get_suites(version)[suite_name]
     user_task_ids = list(suite.user_tasks)[:n_user]
@@ -138,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="Qwen/Qwen2.5-3B-Instruct")
     parser.add_argument("--base-url", default="http://localhost:8000/v1")
     parser.add_argument("--suite", default="banking")
-    parser.add_argument("--attack", default="important_instructions")
+    parser.add_argument("--attack", default="important_instructions_no_user_name")
     parser.add_argument("--n-user", type=int, default=4)
     parser.add_argument("--n-injection", type=int, default=2)
     args = parser.parse_args(argv)
