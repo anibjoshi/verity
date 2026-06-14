@@ -206,7 +206,14 @@ Reporting `ASR_valid`, `ASR_all`, **and** `refusal_rate` together is non-negotia
 
 ## 10. Models & serving matrix
 
-- **Subjects (small):** Qwen2.5-3B-Instruct, Qwen2.5-1.5B-Instruct, Llama-3.2-3B-Instruct, Llama-3.2-1B-Instruct, Hermes-3-Llama-3.2-3B (tool-tuned — does tool-specialization shift catastrophe propensity?).
+- **Subjects (small) — five model families** (diversity across architectures, tokenizers, and safety-training regimes, so the evidence generalizes beyond any one lineage rather than reading as a single-model quirk):
+  - **Qwen2.5** — 3B-Instruct, 1.5B-Instruct (`hermes` tool parser; validated locally).
+  - **Llama-3.2** — 3B-Instruct, 1B-Instruct (`llama3_json` / pythonic parser).
+  - **Hermes-3** — Hermes-3-Llama-3.2-3B (tool-tuned — does tool-specialization shift catastrophe propensity? `hermes` parser).
+  - **Gemma 4** — `gemma-4-E4B-it`, `gemma-4-E2B-it` (released Apr 2026; multimodal, served text-only; `gemma4` parser; **weights are license-gated on HF** — needs an accepted license + token).
+  - **Phi** — `Phi-4-mini-instruct` (3.8B; Phi tool parser, else the `response_format`/`tool_choice` guided-JSON fallback).
+- **Per-model decode registry.** Each family carries its own chat template + tool-call parser + guided-decoding fallback (`decode.py`); the registry is the single source of per-model serving config.
+- **Local serving reality.** Development/scoring runs on a single **RTX 4070 SUPER (12 GB)** → models are served **one at a time** (the sweep is sequential), which all of the above fit at `--gpu-memory-utilization ~0.85` with a bounded `--max-model-len`. Larger or batched runs can move to bigger GPUs without changing the harness (it's an OpenAI-compatible client).
 - **Anchor (frontier):** one frontier API model on identical scenarios — the visible small-vs-frontier gap.
 - **Evidence the premise holds:** BFCL-V4 and the TinyLLM edge study (arXiv:2511.22138) show steep small-model degradation, especially multi-turn (Qwen3-1.7B ≈17%, Qwen3-0.6B ≈1% multi-turn) and schema adherence — precisely the surface the dispatch chokepoint must handle.
 - **Pinning:** HF repo + revision SHA + **quantization** + **chat template** + serving-engine version, recorded per run (§11). Small-model behavior is quant- *and* template-sensitive; both are part of the model identity, and results are reported per (model, quant, template).
