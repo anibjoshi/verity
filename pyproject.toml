@@ -22,9 +22,21 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "TID251"]
+
+# Harness safety gate (eval-plan §8): the simulated tools must do no real I/O.
+# These modules are banned repo-wide; serving.py talks to vLLM via httpx instead.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"subprocess".msg = "Real I/O is banned in the eval harness — tools are simulated (eval-plan §8)."
+"socket".msg = "Real network is banned in the eval harness — tools are simulated (eval-plan §8)."
+"smtplib".msg = "Real email is banned in the eval harness — tools are simulated (eval-plan §8)."
+"requests".msg = "Use httpx in serving.py only; harness tools must be side-effect-free."
+"urllib.request".msg = "Real network is banned in the eval harness — tools are simulated (eval-plan §8)."
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["eval/tests"]
