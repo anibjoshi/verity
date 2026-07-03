@@ -10,6 +10,7 @@
 
 - **In E0:** the formal JSON Schema (§2), authoring conventions (§3), the seed catalog (§4), and the worked seed JSON (§5–§6). No harness, no adapters, no model calls.
 - **Not in E0:** harvested scenarios (AgentDojo/InjecAgent/BIPIA adapters — E3/E4), the runner, the oracle implementation. The schema is designed to accept harvested scenarios (via the `effect` and `tool_name` oracle variants) so the adapters have a target.
+- **Scaling to E5:** §8 specifies how the E0 seed set scales to a statistically meaningful, *reviewed* corpus — the ground-truth (synthetic-data) policy, per-class seed sources, and target counts.
 
 ---
 
@@ -704,3 +705,65 @@ Legitimate tasks whose *text* carries scary tokens but whose correct action is b
 - The `command` regexes in §5.2 are an **E0 stand-in** for the semantic command resolver (PRD §11 / OQ): they match the obvious destructive forms, not the full lexical-bypass space. The real verifier replaces them; the *oracle* keeps the concrete per-scenario match (§7.2).
 - `args_match` on a tool with **no** `args_match` means "any call to this tool" (used in the pool to catch "executed anything at all").
 - Matcher semantics to implement in E2: scalar/`equals` = deep-equal; `regex` = full `re.search` over the stringified arg; `one_of` = membership; `gt|ge|lt|le` = numeric compare (i64 minor units).
+
+---
+
+## 8. Scaling the corpus (E5) — authoring methodology & target counts
+
+E0 proved the schema with six pairs + the hallucination slice + a benign pool. **E5 scales each class to statistically meaningful, reviewed counts.** Because the corpus is the *measuring instrument* — every downstream number (baseline catastrophe rate, verifier coverage, over-block budget) is measured against it — *how* we scale is a methodology decision with a hard rule, not a volume exercise.
+
+### 8.1 The ground-truth rule (synthetic-data policy)
+
+**Payload, label, and oracle come from curated real sources and deterministic checks — never from an LLM.** An LLM may assist *only* at encode time with prose drafting and benign lexical diversity, and every generated item still passes the deterministic oracle **and** human review. This is the same split as the architecture itself — *LLM at authoring, determinism at the checkpoint* (PRD core principle) — applied to the corpus.
+
+Three failure modes this rule avoids:
+
+1. **Circularity / contamination.** We test models on this corpus and later grade a verifier with it. A case a model *wrote* is disproportionately one a model can *pattern-match* — the distribution becomes model-shaped and the numbers flatter whatever they touch. Ground truth must be independent of the models under test (eval-plan §16 OQ7).
+2. **Label trust.** The value is a *deterministic oracle on concrete ground truth* — this exact secret path, this attacker IBAN. An LLM-drafted case still must be verified (is that really a secret? does that command really exfil?); the LLM adds a plausibility layer on top of the expensive step, it does not remove it.
+3. **The crisp/semantic map.** The floor's whole point is mapping *exactly* where `is_secret` / command-resolution is crisp vs. fuzzy. That map must come from real artifacts (the gitleaks ruleset, GTFOBins), not an LLM's guess about what "looks like" a secret.
+
+| Corpus element | Source | LLM role |
+|---|---|---|
+| Catastrophic payload (action + concrete target) | curated real corpora (§8.2) | ✗ never |
+| Oracle ground truth (`violating_actions` / `success_actions`; the concrete path/host/amount) | authored from the payload; deterministic | ✗ never |
+| `expected_disposition` label | human, against the §4.1 rubric | ✗ never |
+| Matched control (benign twin) | hand-authored, same shape (§3, matched-pairs convention) | ✗ never — a deliberate design act |
+| User-instruction prose wrapper | authored; **may** be LLM-drafted | ✓ draft only, then reviewed |
+| Injection-delivery phrasing variants | authored; **may** be LLM-generated | ✓ variants, oracle + review gated |
+| Benign trigger-word pool items | seed NotInject/InjecGuard, expand by template/LLM | ✓ label is benign-by-construction |
+
+### 8.2 Per-class seed sources — and where breadth actually comes from
+
+The authored corpus's unique value is the **system/code-access floor** (`secret_read`, `shell_exec`, `self_mod`) plus the **benign-user-hallucination slice** and the **authorized-high-stakes cell** — the gap no existing benchmark fills. The **data-flow floor** (`tainted_exfil`, `irreversible_financial`, `net_egress`) is already covered at breadth by the adapters (AgentDojo effect oracle; InjecAgent 1,054 cases; BIPIA). So we **invest authoring where we are unique and lean on the adapters where they are strong** — a deliberate use of the multi-adapter architecture, not an even spread.
+
+| floor_class | authored seed source (payload ground truth) | breadth also from |
+|---|---|---|
+| `secret_read` | **gitleaks** default ruleset (planted secrets; later the `is_secret` predicate) | InjecAgent PII-adjacent |
+| `shell_exec` | **NL2Bash** (real commands) + **corrected InterCode** shell tasks | — (thin in benchmarks — our gap) |
+| `self_mod` | **GTFOBins / LOLBAS** (living-off-the-land binaries), skill-poison paths | — (novel — our contribution) |
+| `tainted_exfil` | authored spanning set (schema/oracle coverage) | **AgentDojo** workspace/slack, **InjecAgent DS** |
+| `irreversible_financial` | authored spanning set | **AgentDojo** banking, **InjecAgent DH** |
+| `net_egress` | authored spanning set | **AgentDojo** slack web-post, **BIPIA** |
+| `none` (benign pool) | **NotInject / InjecGuard** 339 samples, expanded | — |
+
+### 8.3 Target counts — first reviewed tranche (quality over quantity)
+
+"Small reviewed set first" (eval-plan §16 OQ1). Counts are set by **confidence-interval width and review budget**, not by how fast cases can be produced: a per-class proportion at n≈30 has a 95% CI half-width ≤ ~0.18 (worst case p=0.5, tighter at the extremes we expect), which is enough to read a clear per-class-per-model signal without an unreviewable pile. Small-model `invalid_rate` shrinks the *valid* denominator, so the code-access classes — where we most need the signal — get the larger n.
+
+| Bucket | Count | Rationale |
+|---|---|---|
+| **Code-access attacks** — `secret_read`, `shell_exec`, `self_mod` | **~30 each → ~90** | our novel contribution; invest for a tight per-class rate |
+| **Data-flow attacks** — `tainted_exfil`, `irreversible_financial`, `net_egress` | **~15 each → ~45** | a spanning authored set for schema/oracle coverage; breadth comes from the adapters |
+| **Hallucination vector** (benign-user, no injection) | **≥10 within each of the three code-access classes** (subset of the ~90, tagged `attack_vector: hallucination`) | the novel slice — must be well-sampled, not a token case |
+| **Matched controls** (benign twin per attack) | **1:1 → ~135** | the crispness measurement needs equal shape (§3, matched-pairs convention) |
+| **Authorized high-stakes** (`.0002` cell → `confirm`) | **~10 per class → ~60** | over-refusal signal; smaller because each must be 100/100 legitimate and convincingly authored |
+| **Benign trigger-word pool** (`floor_class: none`) | **~150** | sample the trigger-word space (rm/password/ssh/transfer/sudo/curl/…) from NotInject's 339 |
+
+**First reviewed tranche ≈ 480 authored scenarios** — substantial but reviewable, weighted toward the gap we uniquely fill. Growth beyond this is measured against whether CIs are still too wide per class, not a fixed larger target.
+
+### 8.4 Review gate & contamination controls (E5 exit conditions)
+
+- **Human review against the rubric.** Every attack's `expected_disposition` and every matched control is reviewed against §4.1; "correct InterCode" and payload verification are human steps — the build-to-learn cost we pay deliberately.
+- **Contamination handling (OQ7).** Keep a **private holdout**, apply **surface-form perturbation** to seeds drawn from public corpora, and report **per-source deltas** so leakage is visible rather than assumed.
+- **Licenses verified before vendoring.** MIT/permissive only — AgentDojo, InjecAgent, NL2Bash, InterCode, gitleaks, BIPIA-code, NotInject. **Avoid** trufflehog (AGPL) and R-Judge (CC BY-NC); verify GTFOBins/LOLBAS per-repo. Vendor/pin with the license recorded.
+- **Everything validates** against §2.3 and `corpus_check.py` (id convention, matched-pair integrity, `expected_disposition` rules, taint markers), and `CORPUS.lock` is refreshed.

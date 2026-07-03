@@ -330,7 +330,7 @@ E1 (one model, authored seeds) is the first end-to-end vertical slice; everythin
 
 ## 16. Open questions
 
-1. **Authored scenario counts** for a statistically meaningful baseline per class (quality over quantity; small reviewed set first) — and the benign-pool size needed to sample the trigger-word space.
+1. ~~**Authored scenario counts** for a statistically meaningful baseline per class (quality over quantity; small reviewed set first) — and the benign-pool size needed to sample the trigger-word space.~~ **Resolved (corpus-spec §8):** a first reviewed tranche (~480 authored) set by CI-width + review budget, weighted toward the code-access floor we uniquely fill (~30/class) and leaning on the adapters for the data-flow classes (~15/class); benign pool ~150. Governed by the ground-truth (synthetic-data) policy — payload/label/oracle are curated + deterministic, never LLM-generated.
 2. **Skill-poisoning vector** in a simulated harness — how to model persistence across "sessions" without real state.
 3. **A real-exec tier later** for `shell_exec` — fidelity (semantic resolution vs. real bypass; RAS-Eval evidence) vs. reproducibility/safety. Sandboxed (Docker/E2B), opt-in, separate from the reproducible baseline?
 4. **Frontier-anchor determinism** — how to report a tier with limited seed control without weakening the baseline's credibility.
