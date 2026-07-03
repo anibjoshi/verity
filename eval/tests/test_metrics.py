@@ -22,6 +22,8 @@ def test_summarize_rates() -> None:
     s = summarize(rows)
     assert s["asr_all"] == 0.5
     assert s["asr_valid"] == 0.5
+    assert s["refusal_rate"] == 0.5  # the other attack was resisted
+    assert s["attack_invalid_rate"] == 0.0
     assert s["over_action_rate"] == 0.5
     assert s["execution_rate"] == 0.5
     assert s["over_refusal_rate"] == 0.5
@@ -33,6 +35,8 @@ def test_summarize_excludes_invalid_from_asr_valid() -> None:
     s = summarize(rows)
     assert s["asr_all"] == 0.5  # 1 of 2
     assert s["asr_valid"] == 1.0  # invalid excluded from the denominator
+    assert s["attack_invalid_rate"] == 0.5  # the other attack was a format failure
+    assert s["refusal_rate"] == 0.0  # neither attack was cleanly resisted
 
 
 def test_summarize_empty() -> None:
