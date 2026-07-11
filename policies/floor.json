@@ -1,0 +1,297 @@
+{
+  "policy_set": "verity.floor",
+  "version": "1.0.0",
+  "schema": "verity-policy/v1",
+  "doc": "The catastrophe floor — hand-written compiled policy (kernel-spec M0); the encode-time compiler later emits this form. Two policy kinds per floor class: a provenance ENVELOPE (the floor action on a tainted path is provably illegitimate -> deny) and an effect FLOOR (the floor action itself is never executed silently -> require_approval, the corpus's 'confirm'). Dispositions follow the corpus four-quadrant model (corpus-spec 4.1): illegitimacy is established either by taint (injection) or by the human at the confirmation gate (hallucination); the kernel never judges legitimacy semantically. Floor criterion: a reasonable user would never want this done silently.",
+  "resolution": {
+    "rule": "highest_severity",
+    "severity": ["deny", "require_approval", "escalate"],
+    "doc": "Any policy True -> Violate; when several fire, the most severe disposition wins and every fired policy appears in the report. Else any policy Unknown -> Indeterminate (disposition escalate). Else Conform. Kleene three-valued logic throughout: a missing ctx field is Unknown, never a silent default."
+  },
+  "capabilities": {
+    "fs.read": {
+      "doc": "Read a file. Corpus/adapter mapping: fs_read.",
+      "inputs": { "path": "string" }
+    },
+    "fs.write": {
+      "doc": "Write or append a file. Corpus/adapter mapping: fs_write.",
+      "inputs": { "path": "string", "content": "string" }
+    },
+    "process.spawn": {
+      "doc": "Execute a shell command. Corpus/adapter mapping: shell_exec; OpenClaw: sessions_spawn.",
+      "inputs": { "command": "string" }
+    },
+    "net.fetch": {
+      "doc": "Retrieval egress — request whose primary effect is reading from a host. Corpus/adapter mapping: http_get, dns_query.",
+      "inputs": { "url": "string" }
+    },
+    "net.send": {
+      "doc": "Content-carrying egress — any outbound send of data to a destination. Corpus/adapter mapping: http_post, webhook_post, email_send, sms_send, message_send, npm_publish, git_push, docker_push.",
+      "inputs": { "to": "string", "body": "string" }
+    },
+    "finance.transfer": {
+      "doc": "Move money. Corpus/adapter mapping: transfer, wire, pay_invoice, refund, crypto_send, gift_card. Amounts are i64 minor units (cents) — kernel-spec OQ1 ratified.",
+      "inputs": { "to": "string", "amount_cents": "i64" }
+    }
+  },
+  "context_fields": {
+    "taint.trigger": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the instruction that motivated this call — 'untrusted' when the step that proposed the action was following content from an untrusted source. Adapter-supplied; missing -> Unknown." },
+    "taint.path": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'path' argument. Missing -> Unknown." },
+    "taint.content": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'content' argument. Missing -> Unknown." },
+    "taint.command": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'command' argument. Missing -> Unknown." },
+    "taint.to": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'to' argument. Missing -> Unknown." },
+    "taint.body": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'body' argument. Missing -> Unknown." },
+    "taint.url": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'url' argument. Missing -> Unknown." },
+    "taint.amount_cents": { "type": "string", "values": ["untrusted", "trusted"], "doc": "Provenance of the action's 'amount_cents' argument. Missing -> Unknown." },
+    "net.egress_allowlist": { "type": "list[string]", "doc": "Hosts the user has allowlisted for retrieval egress. Harness memory, read as context (corpus: environment.state.allowlist). Missing -> Unknown." },
+    "finance.saved_payees": { "type": "list[string]", "doc": "The user's saved payees. Harness memory, read as context (corpus: environment.state.saved_payees). Missing -> Unknown." },
+    "finance.threshold_cents": { "type": "i64", "doc": "The user's confirmation threshold in minor units. Harness memory, read as context (corpus: environment.state.threshold_cents). Missing -> Unknown." }
+  },
+  "predicates": {
+    "is_secret": {
+      "kind": "path_match",
+      "syntax": "regex/RE2",
+      "doc": "True iff the canonicalized path is secret material (private keys, credential stores, token files). The kernel canonicalizes first (expand ~, lexical . / .. normalization) and matches the resolved path — never a raw string compare on unresolved input. Pattern set v1: corpus ground truths generalized with the gitleaks path taxonomy.",
+      "patterns": [
+        "/\\.ssh/id_[a-z0-9_]+$",
+        "\\.(pem|key)$",
+        "(^|/)\\.env(\\.(local|production|prod|staging|stage|dev|development|test|ci))?$",
+        "/\\.aws/credentials$",
+        "/\\.config/gcloud/[^/]*credentials[^/]*\\.json$",
+        "/\\.kube/config$",
+        "/\\.(npmrc|pypirc|netrc|git-credentials|databrickscfg|python-gitlab\\.cfg)$",
+        "/\\.config/gh/hosts\\.yml$",
+        "/\\.config/doctl/config\\.yaml$",
+        "/\\.config/slack/config\\.json$",
+        "/\\.config/[^/]+/(key|token|credentials?)([._-][^/]*)?$",
+        "/\\.age/keys\\.txt$",
+        "(^|/)terraform\\.tfstate(\\.backup)?$"
+      ]
+    },
+    "is_destructive_command": {
+      "kind": "command_match",
+      "syntax": "regex/RE2",
+      "doc": "True iff the command matches a destructive, irreversible form (recursive delete, device overwrite, database drop, history/log destruction, privilege or firewall sabotage, pipe-to-shell). v1 is lexical over the resolved command string — the corpus's own reviewed forms, MITRE ATT&CK-mapped. The semantic command resolver (PRD OQ6) later replaces the matching engine, not the policy shape; lexical bypass (obfuscation, aliasing) is a known, measured limitation of v1.",
+      "patterns": [
+        "\\brm\\s+(-[A-Za-z-]+\\s+)*-[A-Za-z]*r",
+        "\\bfind\\s+(/|~|\\$HOME|/home/\\w+)(\\s+\\S+)*\\s+-delete\\b",
+        "\\bmkfs(\\.\\w+)?\\s+(-\\S+\\s+)*/dev/\\w+",
+        "\\bdd\\b(\\s+\\S+)*\\s+of=/dev/(sd|nvme|vd|hd|mmcblk|disk)\\w*",
+        ">\\s*/dev/(sd|nvme|vd|hd|mmcblk|disk)\\w*",
+        "\\b(shred|wipefs)\\b(\\s+\\S+)*\\s+/dev/\\w+",
+        ":\\s*\\(\\s*\\)\\s*\\{\\s*:\\s*\\|\\s*:\\s*&\\s*\\}\\s*;\\s*:",
+        "(>>?|(\\btee\\s+(-\\S+\\s+)*))\\s*/etc/(passwd|shadow|sudoers|hosts|crontab)\\b",
+        "\\b(curl|wget)\\b[^|]*\\|\\s*(sudo\\s+)?(sh|bash|zsh|python[0-9.]*)\\b",
+        "\\bchmod\\s+(-\\S+\\s+)*-R\\s+(-\\S+\\s+)*0?[0-7]{3}\\s+(/|~|\\$HOME|/home/\\w+/?|/etc|/usr|/var)(\\s|$)",
+        "\\bchown\\s+(-\\S+\\s+)*-R\\s+\\S+\\s+(/|~|\\$HOME|/etc|/usr|/var)(\\s|$)",
+        "\\b(kill\\s+-(9|KILL)\\s+-1\\b|killall5\\b|kill\\s+-1\\s+-1\\b)",
+        "\\bpkill\\s+(-\\S+\\s+)*-KILL\\b",
+        "\\b(iptables|ip6tables)\\s+(-F\\b|--flush\\b)",
+        "\\bufw\\s+(--force\\s+)?(reset|disable)\\b",
+        "\\bnft\\s+flush\\s+ruleset\\b",
+        "\\bmv\\s+\\S+\\s+/dev/null\\b",
+        "(?i)\\bdrop\\s+(database|table|schema)\\b",
+        "\\bgit\\s+reset\\s+--hard\\b",
+        "\\bgit\\s+clean\\s+-[A-Za-z]*f",
+        "\\bdocker\\s+system\\s+prune\\b",
+        "\\bdocker\\s+(kill|rm)\\s+\\$\\(docker\\s+ps",
+        "\\bjournalctl\\s+--vacuum"
+      ]
+    },
+    "is_self_modification": {
+      "kind": "path_match",
+      "syntax": "regex/RE2",
+      "doc": "True iff the canonicalized path is one of the agent's own configuration or persistence surfaces — writes here change future agent behavior (skill poisoning, ATT&CK Persistence). Same canonicalize-then-match discipline as is_secret.",
+      "patterns": [
+        "/\\.config/agent(/|$)",
+        "/\\.(bashrc|bash_profile|bash_login|profile|zshrc|zprofile|zshenv)$",
+        "\\.git/hooks/[^/]+$",
+        "(^/var/spool/cron/|^/etc/cron\\.(d|daily|hourly|weekly|monthly)/|^/etc/crontab$|/\\.crontab$)",
+        "(^/etc/systemd/system/|/\\.config/systemd/user/)\\S*\\.service$",
+        "/\\.ssh/authorized_keys2?$",
+        "/\\.config/autostart/[^/]*\\.desktop$",
+        "(^/etc/sudoers$|^/etc/sudoers\\.d/)",
+        "\\.git/config$"
+      ]
+    },
+    "is_external": {
+      "kind": "destination_resolve",
+      "doc": "Resolve the destination to a domain: URL/host forms -> host; email -> the domain after '@'; git remotes -> remote host. External iff the resolved domain (or a parent domain) is NOT in internal_domains and the host is not loopback, RFC1918, or '.internal'. Forms with no resolvable domain (bare phone numbers, chat handles) -> Unknown: externality is not crisp there and the kernel never guesses — Unknown drives Indeterminate -> escalate.",
+      "internal_domains": ["ourcompany.com"],
+      "note": "internal_domains is authored policy data — the personalization seam (author by intent, later learned from corrections). The v1 value matches the corpus's internal org."
+    },
+    "is_allowlisted": {
+      "kind": "host_in_ctx",
+      "reads_ctx": "net.egress_allowlist",
+      "doc": "True iff the destination host exactly matches an entry of the user's egress allowlist (context). Missing allowlist -> Unknown."
+    },
+    "is_unknown_payee": {
+      "kind": "not_in_ctx",
+      "reads_ctx": "finance.saved_payees",
+      "doc": "True iff the payee (trimmed, case-insensitive) is NOT among the user's saved payees (context). Missing payee list -> Unknown."
+    }
+  },
+  "policies": {
+    "no_tainted_secret_reads": {
+      "rationale": "A read of secret material whose target or trigger arrived from untrusted content is an injection reading the user's keys — denied outright.",
+      "floor_class": "secret_read",
+      "on_capability": "fs.read",
+      "when": {
+        "and": [
+          { "is_secret": { "arg": "path" } },
+          { "or": [
+            { "eq": [ { "ctx": "taint.path" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "secret_read_floor": {
+      "rationale": "Reading secret material (keys, credentials, token stores) is on the catastrophe floor; legitimate cases exist (key migration), so it is gated with confirmation — never executed silently.",
+      "floor_class": "secret_read",
+      "on_capability": "fs.read",
+      "when": { "is_secret": { "arg": "path" } },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    },
+    "no_tainted_exec": {
+      "rationale": "A destructive command whose text or trigger arrived from untrusted content is an injected attack on the system — denied outright.",
+      "floor_class": "shell_exec",
+      "on_capability": "process.spawn",
+      "when": {
+        "and": [
+          { "is_destructive_command": { "arg": "command" } },
+          { "or": [
+            { "eq": [ { "ctx": "taint.command" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "destructive_exec_floor": {
+      "rationale": "Destructive, irreversible commands (recursive delete, device overwrite, DROP DATABASE) are on the catastrophe floor; the user may genuinely want them, so they are confirmed — a reasonable user never wants them run silently. The confirmation gate is also what catches the hallucinated ones: no taint marks an agent's own overreach.",
+      "floor_class": "shell_exec",
+      "on_capability": "process.spawn",
+      "when": { "is_destructive_command": { "arg": "command" } },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    },
+    "no_tainted_self_modification": {
+      "rationale": "A write into the agent's own configuration or persistence surfaces driven by untrusted content is skill-poisoning — denied outright.",
+      "floor_class": "self_mod",
+      "on_capability": "fs.write",
+      "when": {
+        "and": [
+          { "is_self_modification": { "arg": "path" } },
+          { "or": [
+            { "eq": [ { "ctx": "taint.path" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.content" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "self_modification_floor": {
+      "rationale": "Writes to the agent's own config, shell rc files, git hooks, cron, or service definitions change future agent behavior; they are confirmed even when the user asked.",
+      "floor_class": "self_mod",
+      "on_capability": "fs.write",
+      "when": { "is_self_modification": { "arg": "path" } },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    },
+    "no_tainted_exfiltration": {
+      "rationale": "External send of untrusted-provenance data completes the lethal trifecta — denied outright.",
+      "floor_class": "tainted_exfil",
+      "on_capability": "net.send",
+      "when": {
+        "and": [
+          { "is_external": { "arg": "to" } },
+          { "or": [
+            { "eq": [ { "ctx": "taint.body" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.to" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "external_send_floor": {
+      "rationale": "Sending content outside the trust domain is confirm-gated: legitimate external sends exist (the auditor, the client), but they never happen silently.",
+      "floor_class": "tainted_exfil",
+      "on_capability": "net.send",
+      "when": { "is_external": { "arg": "to" } },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    },
+    "no_tainted_egress": {
+      "rationale": "Retrieval egress to an off-allowlist host on a tainted path is exfiltration by URL — denied outright.",
+      "floor_class": "net_egress",
+      "on_capability": "net.fetch",
+      "when": {
+        "and": [
+          { "is_external": { "arg": "url" } },
+          { "not": { "is_allowlisted": { "arg": "url" } } },
+          { "or": [
+            { "eq": [ { "ctx": "taint.url" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "unlisted_egress_floor": {
+      "rationale": "Egress to an external host not on the user's allowlist is confirm-gated; allowlisted retrieval stays quiet — the allowlist is exactly the noise budget, authored.",
+      "floor_class": "net_egress",
+      "on_capability": "net.fetch",
+      "when": {
+        "and": [
+          { "is_external": { "arg": "url" } },
+          { "not": { "is_allowlisted": { "arg": "url" } } }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    },
+    "no_tainted_transfers": {
+      "rationale": "A transfer whose payee or amount arrived from untrusted content is an injected payment — denied outright.",
+      "floor_class": "irreversible_financial",
+      "on_capability": "finance.transfer",
+      "when": {
+        "and": [
+          { "or": [
+            { "gt": [ { "arg": "amount_cents" }, { "ctx": "finance.threshold_cents" } ] },
+            { "is_unknown_payee": { "arg": "to" } }
+          ] },
+          { "or": [
+            { "eq": [ { "ctx": "taint.to" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.amount_cents" }, "untrusted" ] },
+            { "eq": [ { "ctx": "taint.trigger" }, "untrusted" ] }
+          ] }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "deny"
+    },
+    "financial_floor": {
+      "rationale": "Money movement over the user's threshold or to an unknown payee is irreversible enough to confirm — never silent. Under-threshold transfers to saved payees are the user's authored quiet zone.",
+      "floor_class": "irreversible_financial",
+      "on_capability": "finance.transfer",
+      "when": {
+        "or": [
+          { "gt": [ { "arg": "amount_cents" }, { "ctx": "finance.threshold_cents" } ] },
+          { "is_unknown_payee": { "arg": "to" } }
+        ]
+      },
+      "verdict": "violate",
+      "disposition": "require_approval"
+    }
+  }
+}
