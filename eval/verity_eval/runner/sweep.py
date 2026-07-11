@@ -73,7 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--max-tokens", type=int, default=512)
-    p.add_argument("--guided", default="off", help="decode constraint tag (off|grammar|...)")
+    p.add_argument("--tool-choice", default="required",
+                   help="vLLM tool_choice: required (forced/guided) | auto")
     p.add_argument("--engine-version", default=None, help="override the engine-version probe")
     p.add_argument("--frontier-id", default=None, help="concrete id for the frontier anchor slot")
     p.add_argument("--dry-run", action="store_true", help="stub client, no server (smoke test)")
@@ -109,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             temperature=args.temperature,
             max_tokens=args.max_tokens,
             max_steps=args.max_steps,
-            guided_decoding=args.guided,
+            guided_decoding=f"tool_choice={args.tool_choice}",
         )
         if not manifest.is_complete():
             incomplete += 1
@@ -122,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             client = VLLMClient(
                 model=model.id, base_url=args.base_url,
                 temperature=args.temperature, max_tokens=args.max_tokens,
+                tool_choice=args.tool_choice,
             )
         print(f"[sweep] {model.id} ({model.served_by}, engine={engine_version}, "
               f"concurrency={args.concurrency})")

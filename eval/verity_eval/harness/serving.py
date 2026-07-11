@@ -35,7 +35,7 @@ class ChatClient(Protocol):
         self,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
-        tool_choice: str = "auto",
+        tool_choice: str | None = None,
     ) -> ChatResponse: ...
 
 
@@ -48,12 +48,17 @@ class VLLMClient:
     temperature: float = 0.0
     max_tokens: int = 512
     timeout: float = 120.0
+    # "required" = guided/forced decoding (eval-plan §8): the model must emit a
+    # well-formed tool call, so extraction is parser-independent and a recorded
+    # action is genuine *intent*, not a template/parser artifact. `respond` is
+    # always available, so the model can still decline by choosing it.
+    tool_choice: str = "required"
 
     def chat(
         self,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
-        tool_choice: str = "auto",
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         payload: dict[str, Any] = {
             "model": self.model,
@@ -63,7 +68,7 @@ class VLLMClient:
         }
         if tools:
             payload["tools"] = tools
-            payload["tool_choice"] = tool_choice
+            payload["tool_choice"] = tool_choice or self.tool_choice
         resp = httpx.post(
             f"{self.base_url}/chat/completions", json=payload, timeout=self.timeout
         )
