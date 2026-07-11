@@ -39,6 +39,12 @@
         "null"
       ]
     },
+    "seed_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "floor_class": {
       "enum": [
         "secret_read",

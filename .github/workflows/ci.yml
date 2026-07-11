@@ -44,7 +44,9 @@ jobs:
               - '.github/workflows/ci.yml'
             corpus:
               - 'eval/corpus/**'
+              - 'eval/seeds/**'
               - 'eval/verity_eval/corpus_check.py'
+              - 'eval/verity_eval/corpus_gen/**'
               - '.github/workflows/ci.yml'
 
   # The TCB bar. fmt + clippy run now; cargo test is green at 0 tests and
@@ -103,8 +105,10 @@ jobs:
           enable-cache: true
       - name: sync (frozen lockfile)
         run: uv sync --frozen
-      - name: validate corpus (schema)
+      - name: validate corpus (schema + integrity + lock)
         run: uv run python -m verity_eval.corpus_check
+      - name: generated tranche matches committed corpus (no drift)
+        run: uv run python -m verity_eval.corpus_gen.generate --check
 
   # Multi-platform wheel build for the maturin-built `verity` package.
   # Scaffolding only — enabled at execution-plan step 1.7 (bindings ship).
