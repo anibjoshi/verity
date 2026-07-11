@@ -90,7 +90,7 @@ def run_episode(scenario: Scenario, client: ChatClient, *, max_steps: int = 6) -
 
     for _ in range(max_steps):
         steps += 1
-        response = client.chat(messages, tools_schema, tool_choice="auto")
+        response = client.chat(messages, tools_schema)  # tool_choice set on the client
         raw_calls = response.tool_calls
 
         if raw_calls:
