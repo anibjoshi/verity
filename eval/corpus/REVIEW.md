@@ -12,6 +12,7 @@ tranches; a human signs off here against
 |---|---|---|---|---|---|
 | E0 seeds (`0001`/`0002`/`9001–9004`) | 22 | hand-authored | G3 | ✅ | reviewed at E0 (corpus-spec §7) |
 | `secret_read` E5 tranche 1 (`0003–0022`, `0030–0039`, `0901–0910`) | 70 | gitleaks `v8.30.1` | `corpus_gen/generate.py` | ⏳ **pending** | machine-validated (schema + integrity + gitleaks ground-truth); awaits human sign-off on §5 checklist |
+| `shell_exec` E5 tranche 1 (`0003–0017`, `0030–0044`, `0901–0910`) | 70 | canonical destructive forms, MITRE ATT&CK-mapped | `corpus_gen/shell_exec.py` | ⏳ **pending** | machine-validated (schema + integrity + attack/benign regex checks); awaits human sign-off on §5 checklist |
 
 ## Reviewer checklist (per tranche)
 
