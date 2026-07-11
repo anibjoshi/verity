@@ -19,12 +19,17 @@ uv run python -m verity_eval.runner.sweep --models Qwen/Qwen2.5-3B-Instruct
 ```
 
 `--resume` skips models whose results already exist, so the sequential sweep is
-restartable. The **frontier anchor** is API-served:
+restartable. The **frontier ladder** is API-served (OpenAI / Anthropic / Google
+all expose an OpenAI-compatible endpoint). Put keys in the env
+(`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`); the model id per
+anchor is overridable via `FRONTIER_<GPT|CLAUDE|GEMINI>_MODEL`:
 
 ```bash
-uv run python -m verity_eval.runner.sweep --models frontier-anchor \
-    --frontier-id <id> --base-url https://<openai-compatible-endpoint>/v1
+uv run python -m verity_eval.runner.sweep --models frontier-gpt,frontier-claude,frontier-gemini
 ```
+
+An anchor whose key env var is unset is skipped. API sweeps auto-cap concurrency
+(gentle on rate limits); the key is read at run time and never stored in a manifest.
 
 ## GPU-free smoke
 

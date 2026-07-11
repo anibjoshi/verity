@@ -52,13 +52,32 @@ SMALL_MATRIX: list[ModelSpec] = [
     ),
 ]
 
-# One frontier anchor (API-served, OpenAI-compatible) — the small-vs-frontier gap
-# (§9). The concrete id + endpoint are supplied at run time; this is the slot.
-FRONTIER_ANCHOR = ModelSpec(
-    "frontier-anchor", "frontier", tool_parser="auto", served_by="api", params_b=0.0
-)
+# The frontier ladder (API-served, OpenAI-compatible endpoints) — the small-vs-
+# frontier gap (§9). Each anchor's id is a stable slug (its result file); the
+# actual API model id comes from FRONTIER_<SLUG>_MODEL in the env, else the
+# default below. The key is read from api_key_env at run time (never stored).
+FRONTIER: list[ModelSpec] = [
+    ModelSpec(
+        "frontier-gpt", "frontier", served_by="api",
+        base_url="https://api.openai.com/v1",
+        api_key_env="OPENAI_API_KEY", default_api_model="gpt-4o",
+    ),
+    ModelSpec(
+        "frontier-claude", "frontier", served_by="api",
+        base_url="https://api.anthropic.com/v1",
+        api_key_env="ANTHROPIC_API_KEY", default_api_model="claude-sonnet-5",
+    ),
+    ModelSpec(
+        "frontier-gemini", "frontier", served_by="api",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        api_key_env="GEMINI_API_KEY", default_api_model="gemini-2.5-pro",
+    ),
+]
 
-MATRIX: list[ModelSpec] = [*SMALL_MATRIX, FRONTIER_ANCHOR]
+# Back-compat alias (a single anchor slot referenced by older callers/tests).
+FRONTIER_ANCHOR = FRONTIER[0]
+
+MATRIX: list[ModelSpec] = [*SMALL_MATRIX, *FRONTIER]
 
 BY_ID: dict[str, ModelSpec] = {m.id: m for m in MATRIX}
 

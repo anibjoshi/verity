@@ -7,9 +7,9 @@ manifest path with a stub client and no server, so the plumbing is CI-testable.
 
     # one served model (server already up for it):
     python -m verity_eval.runner.sweep --models Qwen/Qwen2.5-3B-Instruct
-    # the frontier anchor over an OpenAI-compatible API:
-    python -m verity_eval.runner.sweep --models frontier-anchor \
-        --frontier-id gpt-4o --base-url https://api.example/v1
+    # the frontier ladder (keys in the env: OPENAI_API_KEY / ANTHROPIC_API_KEY /
+    # GEMINI_API_KEY; model id overridable via FRONTIER_<GPT|CLAUDE|GEMINI>_MODEL):
+    python -m verity_eval.runner.sweep --models frontier-gpt,frontier-claude,frontier-gemini
     # GPU-free smoke of the whole matrix:
     python -m verity_eval.runner.sweep --dry-run
 """
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -76,7 +77,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--tool-choice", default="required",
                    help="vLLM tool_choice: required (forced/guided) | auto")
     p.add_argument("--engine-version", default=None, help="override the engine-version probe")
-    p.add_argument("--frontier-id", default=None, help="concrete id for the frontier anchor slot")
     p.add_argument("--dry-run", action="store_true", help="stub client, no server (smoke test)")
     p.add_argument("--resume", action="store_true", help="skip models whose results already exist")
     args = p.parse_args(argv)
@@ -94,23 +94,33 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[sweep] {len(specs)} model(s) × {len(scenarios)} scenario(s) → {out_dir}")
     incomplete = 0
     for spec in specs:
-        model = spec
-        if model.id == "frontier-anchor" and args.frontier_id:
-            model = replace(spec, id=args.frontier_id)
+        # Resolve the target: a local vLLM server, or a frontier API (its own
+        # OpenAI-compatible endpoint + key). For API anchors the concrete model id
+        # comes from FRONTIER_<SLUG>_MODEL, else the spec's default.
+        api_key: str | None = None
+        if spec.served_by == "api":
+            slug_env = spec.id.rsplit("-", 1)[-1].upper()  # frontier-gpt -> GPT
+            api_model = os.environ.get(f"FRONTIER_{slug_env}_MODEL", spec.default_api_model)
+            api_key = os.environ.get(spec.api_key_env)
+            if not api_key and not args.dry_run:
+                print(f"[sweep] skip {spec.id}: {spec.api_key_env} not set in env")
+                continue
+            model = replace(spec, id=api_model)
+            base_url, eng = spec.base_url, spec.base_url
+            conc = min(args.concurrency, 8)  # be gentle on API rate limits
+        else:
+            model = spec
+            base_url, eng, conc = args.base_url, engine_version, args.concurrency
+
         slug = model.id.replace("/", "__")
         if args.resume and (out_dir / f"{slug}.jsonl").is_file():
             print(f"[sweep] skip {model.id} (resume; results exist)")
             continue
 
         manifest = build_manifest(
-            model,
-            corpus_version=corpus_version,
-            engine_version=engine_version,
-            seed=args.seed,
-            temperature=args.temperature,
-            max_tokens=args.max_tokens,
-            max_steps=args.max_steps,
-            guided_decoding=f"tool_choice={args.tool_choice}",
+            model, corpus_version=corpus_version, engine_version=eng, seed=args.seed,
+            temperature=args.temperature, max_tokens=args.max_tokens,
+            max_steps=args.max_steps, guided_decoding=f"tool_choice={args.tool_choice}",
         )
         if not manifest.is_complete():
             incomplete += 1
@@ -121,15 +131,13 @@ def main(argv: list[str] | None = None) -> int:
             client = DryRunClient()
         else:
             client = VLLMClient(
-                model=model.id, base_url=args.base_url,
+                model=model.id, base_url=base_url,
                 temperature=args.temperature, max_tokens=args.max_tokens,
-                tool_choice=args.tool_choice,
+                tool_choice=args.tool_choice, api_key=api_key,
             )
-        print(f"[sweep] {model.id} ({model.served_by}, engine={engine_version}, "
-              f"concurrency={args.concurrency})")
+        print(f"[sweep] {model.id} ({model.served_by}, engine={eng}, concurrency={conc})")
         jsonl = run_model(
-            model, scenarios, client, manifest, out_dir,
-            max_steps=args.max_steps, concurrency=args.concurrency,
+            model, scenarios, client, manifest, out_dir, max_steps=args.max_steps, concurrency=conc,
         )
         print(f"[sweep]   → {jsonl}")
 
