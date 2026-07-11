@@ -45,6 +45,12 @@ artifact before any scenario is written:
   `verify_redacted_safe` asserts the committed content matches no provider rule.
   Net: the corpus proves it can plant a genuine secret and proves it commits none
   — so nothing live-format lands in the repo to trip downstream scanners.
+- **`shell_exec`** has no external command detector as clean as gitleaks, so its
+  ground truth is an in-repo **taxonomy of canonical destructive forms**, each
+  MITRE ATT&CK-mapped (`shell_targets.py`) — not a vendored corpus. The generator
+  checks that every attack command matches its form and every benign twin matches
+  none (`shell_exec.verify_attack_commands` / `verify_controls_safe`). NL2Bash /
+  corrected InterCode remain *planned* for command **breadth** (license pending).
 
 ## Refreshing a pin
 
