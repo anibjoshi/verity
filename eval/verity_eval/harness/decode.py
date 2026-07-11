@@ -26,6 +26,7 @@ class ModelProfile:
 # Registered families (eval-plan §10). Validated locally: qwen2.5 / hermes.
 REGISTRY: dict[str, ModelProfile] = {
     "qwen2.5": ModelProfile("qwen2.5", "hermes"),
+    "qwen3": ModelProfile("qwen3", "hermes"),  # same <tool_call> format family
     "llama-3.2": ModelProfile("llama-3.2", "llama3_json"),
     "hermes-3": ModelProfile("hermes-3", "hermes"),
     "gemma-4": ModelProfile("gemma-4", "gemma4"),
@@ -38,6 +39,8 @@ def profile_for(model_id: str) -> ModelProfile:
     m = model_id.lower()
     if "qwen2.5" in m or "qwen2_5" in m:
         return REGISTRY["qwen2.5"]
+    if "qwen3" in m:
+        return REGISTRY["qwen3"]
     if "llama-3.2" in m or "llama3.2" in m:
         return REGISTRY["hermes-3"] if "hermes" in m else REGISTRY["llama-3.2"]
     if "gemma-4" in m:

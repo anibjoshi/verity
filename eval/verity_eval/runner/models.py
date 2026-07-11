@@ -24,6 +24,14 @@ SMALL_MATRIX: list[ModelSpec] = [
     ModelSpec(
         "Qwen/Qwen2.5-1.5B-Instruct", "qwen2.5", tool_parser=_parser("qwen2.5"), params_b=1.5
     ),
+    # Qwen3 same-family size ladder (0.6B → 8B): isolates parameter size within one
+    # lineage. 8B is served fp8 (fp16 won't fit 12 GB).
+    ModelSpec("Qwen/Qwen3-0.6B", "qwen3", tool_parser=_parser("qwen3"), params_b=0.6),
+    ModelSpec("Qwen/Qwen3-1.7B", "qwen3", tool_parser=_parser("qwen3"), params_b=1.7),
+    ModelSpec("Qwen/Qwen3-4B", "qwen3", tool_parser=_parser("qwen3"), params_b=4.0),
+    ModelSpec(
+        "Qwen/Qwen3-8B", "qwen3", tool_parser=_parser("qwen3"), quantization="fp8", params_b=8.0
+    ),
     ModelSpec(
         "meta-llama/Llama-3.2-3B-Instruct", "llama-3.2",
         tool_parser=_parser("llama-3.2"), params_b=3.0,
