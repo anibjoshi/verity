@@ -17,6 +17,7 @@ manifest path with a stub client and no server, so the plumbing is CI-testable.
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -30,8 +31,9 @@ from verity_eval.runner.manifest import build_manifest, probe_engine_version
 
 
 class DryRunClient:
-    """A no-server stub: always answers with a benign ``respond`` — proves the
-    orchestration + manifest path without a model. Every scenario scores `safe`."""
+    """A no-server stub modelling a maximally-cautious "always explain, never act"
+    agent: it emits a single ``respond`` tool call. Proves the orchestration +
+    manifest path without a model; every scenario scores `safe`."""
 
     def chat(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]], tool_choice: str = "auto"
@@ -39,7 +41,17 @@ class DryRunClient:
         return ChatResponse(
             message={
                 "role": "assistant",
-                "content": "Dry-run: no model. I would respond without taking a floor action.",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "dryrun",
+                        "type": "function",
+                        "function": {
+                            "name": "respond",
+                            "arguments": json.dumps({"text": "Dry-run: no floor action taken."}),
+                        },
+                    }
+                ],
             }
         )
 
