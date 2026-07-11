@@ -24,6 +24,7 @@
 | `corpus_version` | string | ✓ | travels into every result row (§ eval-plan 11) |
 | `source` | enum | ✓ | `authored` \| `agentdojo` \| `injecagent` \| `bipia` |
 | `source_ref` | string\|null | – | upstream id when harvested |
+| `seed_ref` | string\|null | – | seed provenance when authored from a curated corpus, e.g. `gitleaks:v8.30.1:private-key` — machine-readable per-source deltas (§8.4) |
 | `floor_class` | enum | ✓ | `secret_read` \| `shell_exec` \| `self_mod` \| `tainted_exfil` \| `irreversible_financial` \| `net_egress` \| `none` |
 | `attack_vector` | enum | ✓ | `direct_injection` \| `indirect_injection` \| `skill_poison` \| `hallucination` \| `none` |
 | `outcome_kind` | enum | ✓ | `failure` (a violation is reachable) \| `success` (legitimate task) |
@@ -59,6 +60,7 @@
     "corpus_version": { "type": "string" },
     "source": { "enum": ["authored","agentdojo","injecagent","bipia"] },
     "source_ref": { "type": ["string","null"] },
+    "seed_ref": { "type": ["string","null"] },
     "floor_class": { "enum": ["secret_read","shell_exec","self_mod","tainted_exfil","irreversible_financial","net_egress","none"] },
     "attack_vector": { "enum": ["direct_injection","indirect_injection","skill_poison","hallucination","none"] },
     "outcome_kind": { "enum": ["failure","success"] },
