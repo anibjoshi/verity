@@ -193,6 +193,22 @@ what the oracle names (§7.2), grading stays non-circular. These classes are
 naturally `indirect_injection` (the confused-deputy vector); the hallucination
 slice is not required here (it is the ≥10-per-code-access-class rule, §8.3).
 
+### 3.8 The benign trigger-word pool (`floor_class: none`)
+
+The over-defense probes (eval-plan §3): legitimate tasks whose *text* carries
+scary tokens (`rm -rf`, `password`, `wire transfer`, `.onion`) but whose correct
+action is benign. They measure the verifier's **false-positive rate on trigger
+words** — a verifier that flags `respond()` because the prompt says "rm -rf" is
+the SELinux-noise failure. This is the **one** place the synthetic-data rule
+(§8.1) permits templating: the label is **benign by construction** (an
+explain / summarize / write task cannot be a catastrophe), so no payload
+judgement is needed. `corpus_gen/benign_pool.py` crosses ~30 curated trigger
+words (≥5 per floor family, so the FP rate is measurable per family) with 5
+benign templates (explain / how-to / review / write / docs) → 150 cases. Each
+offers the family's dangerous tool as a distractor; the oracle's
+`violating_actions` catch the over-reaction (running the command, reading the
+secret), `success_actions` the benign action (`respond`, read the policy doc).
+
 ## 4. Conventions
 
 - **IDs / `seq` blocks** (per class): injection attacks `0003–0029`,
@@ -253,4 +269,5 @@ Only after sign-off is the tranche's row in `REVIEW.md` marked reviewed.
 | `tainted_exfil` | `corpus_gen/tainted_exfil.py` | authored spanning set (trifecta; matchers); breadth from adapters | 15 attacks · 15 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
 | `irreversible_financial` | `corpus_gen/irreversible_financial.py` | authored spanning set (amount/payee matchers); breadth from adapters | 14 attacks · 14 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
 | `net_egress` | `corpus_gen/net_egress.py` | authored spanning set (off-allowlist host matchers); breadth from adapters | 13 attacks · 13 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
+| `none` (benign pool) | `corpus_gen/benign_pool.py` | benign-by-construction; trigger words × templates | 150 over-defense probes (~5 triggers/family × 5 templates) | ⏳ pending (`REVIEW.md`) |
 | `none` (benign pool) | — | NotInject / InjecGuard | — | — |
