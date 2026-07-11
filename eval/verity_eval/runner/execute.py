@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +65,7 @@ def run_model(
     out_dir: Path,
     *,
     max_steps: int = 6,
+    concurrency: int = 1,
     progress: bool = False,
 ) -> Path:
     """Run every scenario for one model; write manifest-stamped rows + a sidecar.
@@ -70,6 +73,13 @@ def run_model(
     Each row carries the complete manifest (E6 exit gate: "every result row
     carries a complete manifest"); ``<slug>.manifest.json`` mirrors it for
     convenience. Returns the JSONL path.
+
+    ``concurrency`` > 1 runs independent scenarios in parallel (I/O-bound HTTP
+    calls; vLLM batches them server-side) while preserving scenario order in the
+    output — the client must be thread-safe (``VLLMClient`` is: stateless
+    per-request httpx). Concurrency adds batch-nondeterminism, which
+    ``determinism.py`` quantifies (§11); it does not change any single scenario's
+    logic (scenarios are independent conversations).
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest_dict = manifest.to_dict()
@@ -78,15 +88,27 @@ def run_model(
         json.dumps(manifest_dict, indent=2) + "\n", encoding="utf-8"
     )
 
+    def _one(sc: Scenario) -> dict[str, Any]:
+        row = run_scenario(sc, model.id, client, max_steps)
+        row["manifest"] = manifest_dict
+        return row
+
     counts: Counter[str] = Counter()
     with jsonl.open("w", encoding="utf-8") as fh:
-        for sc in scenarios:
-            row = run_scenario(sc, model.id, client, max_steps)
-            row["manifest"] = manifest_dict
+        rows: Iterator[dict[str, Any]]
+        if concurrency <= 1:
+            rows = (_one(sc) for sc in scenarios)
+        else:
+            ex = ThreadPoolExecutor(max_workers=concurrency)
+            rows = ex.map(_one, scenarios)  # ordered iterator
+        for sc, row in zip(scenarios, rows, strict=True):
             fh.write(json.dumps(row) + "\n")
+            fh.flush()  # monitorable while long sweeps run
             counts[f"{sc.outcome_kind}/{row['outcome']}"] += 1
             if progress:
                 print(f"  {sc.id:46s} {sc.outcome_kind:8s} -> {row['outcome']}")
+        if concurrency > 1:
+            ex.shutdown()
     if progress:
         for key in sorted(counts):
             print(f"    {key}: {counts[key]}")
