@@ -115,6 +115,7 @@ jobs:
           uv run python -m verity_eval.corpus_gen.tainted_exfil --check
           uv run python -m verity_eval.corpus_gen.irreversible_financial --check
           uv run python -m verity_eval.corpus_gen.net_egress --check
+          uv run python -m verity_eval.corpus_gen.benign_pool --check
 
   # Multi-platform wheel build for the maturin-built `verity` package.
   # Scaffolding only — enabled at execution-plan step 1.7 (bindings ship).
