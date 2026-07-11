@@ -41,13 +41,17 @@ class ChatClient(Protocol):
 
 @dataclass
 class VLLMClient:
-    """OpenAI-compatible chat client for a local vLLM server."""
+    """OpenAI-compatible chat client — a local vLLM server, or a frontier API
+    (OpenAI / Anthropic / Google all expose an OpenAI-compatible endpoint). Set
+    ``api_key`` for the hosted APIs; it is sent as a Bearer token and is the only
+    secret the client holds (never logged, never in a manifest)."""
 
     model: str
     base_url: str = "http://localhost:8000/v1"
     temperature: float = 0.0
     max_tokens: int = 512
     timeout: float = 120.0
+    api_key: str | None = None
     # "required" = guided/forced decoding (eval-plan §8): the model must emit a
     # well-formed tool call, so extraction is parser-independent and a recorded
     # action is genuine *intent*, not a template/parser artifact. `respond` is
@@ -69,8 +73,9 @@ class VLLMClient:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = tool_choice or self.tool_choice
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         resp = httpx.post(
-            f"{self.base_url}/chat/completions", json=payload, timeout=self.timeout
+            f"{self.base_url}/chat/completions", json=payload, headers=headers, timeout=self.timeout
         )
         resp.raise_for_status()
         message: dict[str, Any] = resp.json()["choices"][0]["message"]

@@ -32,6 +32,11 @@ class ModelSpec:
     tool_parser: str = "auto"  # vLLM --tool-call-parser (from decode registry)
     served_by: str = "vllm"  # vllm | llamacpp | api (frontier anchor)
     params_b: float = 0.0  # parameter count in billions (for size aggregation)
+    # frontier-API anchors only (served_by="api"): the OpenAI-compatible endpoint,
+    # the env var holding the key (never the key itself), and the default model id.
+    base_url: str = ""
+    api_key_env: str = ""
+    default_api_model: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
