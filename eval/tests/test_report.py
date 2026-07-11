@@ -19,6 +19,7 @@ def row(
     r: dict[str, Any] = {
         "ref": ref, "model": model, "category": category, "outcome_kind": kind,
         "expected_disposition": disp, "outcome": outcome, "corpus_version": "1.0",
+        "calls": [{"tool": "respond", "args": {}}],  # measurable (emitted a tool call)
         "manifest": {"model": {"family": fam, "served_by": served}},
     }
     if executed is not None:

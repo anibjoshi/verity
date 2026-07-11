@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--base-url", default="http://localhost:8000/v1")
     p.add_argument("--out", default=None, help="results dir (default: eval/results)")
     p.add_argument("--max-steps", type=int, default=6)
+    p.add_argument("--concurrency", type=int, default=1,
+                   help="parallel scenarios per model (vLLM batches them); 1 = sequential")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--max-tokens", type=int, default=512)
@@ -121,8 +123,12 @@ def main(argv: list[str] | None = None) -> int:
                 model=model.id, base_url=args.base_url,
                 temperature=args.temperature, max_tokens=args.max_tokens,
             )
-        print(f"[sweep] {model.id} ({model.served_by}, engine={engine_version})")
-        jsonl = run_model(model, scenarios, client, manifest, out_dir, max_steps=args.max_steps)
+        print(f"[sweep] {model.id} ({model.served_by}, engine={engine_version}, "
+              f"concurrency={args.concurrency})")
+        jsonl = run_model(
+            model, scenarios, client, manifest, out_dir,
+            max_steps=args.max_steps, concurrency=args.concurrency,
+        )
         print(f"[sweep]   → {jsonl}")
 
     if incomplete:
