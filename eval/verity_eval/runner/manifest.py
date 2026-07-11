@@ -37,6 +37,10 @@ class ModelSpec:
     base_url: str = ""
     api_key_env: str = ""
     default_api_model: str = ""
+    # provider param quirks for API anchors (see serving.VLLMClient)
+    max_tokens_param: str = "max_tokens"
+    send_temperature: bool = True
+    extra_body_json: str = ""  # JSON dict merged into the request body
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

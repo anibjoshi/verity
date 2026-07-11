@@ -32,7 +32,7 @@ def test_incomplete_manifest_is_flagged() -> None:
 def test_frontier_anchor_and_derived_specs() -> None:
     # The matrix has the five small families + one frontier anchor.
     assert matrix.FRONTIER_ANCHOR.served_by == "api"
-    assert len(matrix.MATRIX) == 15  # small (incl. Qwen3 ladder) + 3 frontier anchors
+    assert len(matrix.MATRIX) == 16  # small (incl. Qwen3 ladder) + 4 frontier anchors
     # An unknown id still resolves to a usable spec (derived family).
     derived = matrix.spec_for("Qwen/Qwen2.5-0.5B-Instruct")
     assert derived.family == "qwen2.5" and derived.tool_parser == "hermes"
