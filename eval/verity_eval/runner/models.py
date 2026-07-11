@@ -59,18 +59,27 @@ SMALL_MATRIX: list[ModelSpec] = [
 FRONTIER: list[ModelSpec] = [
     ModelSpec(
         "frontier-gpt", "frontier", served_by="api",
-        base_url="https://api.openai.com/v1",
-        api_key_env="OPENAI_API_KEY", default_api_model="gpt-4o",
+        base_url="https://api.openai.com/v1", api_key_env="OPENAI_API_KEY",
+        default_api_model="gpt-5.6-sol",
+        # GPT-5.6: max_completion_tokens, no temperature, reasoning off (tools
+        # aren't supported alongside reasoning on /chat/completions).
+        max_tokens_param="max_completion_tokens", send_temperature=False,
+        extra_body_json='{"reasoning_effort": "none"}',
     ),
     ModelSpec(
-        "frontier-claude", "frontier", served_by="api",
-        base_url="https://api.anthropic.com/v1",
-        api_key_env="ANTHROPIC_API_KEY", default_api_model="claude-sonnet-5",
+        "frontier-opus", "frontier", served_by="api",
+        base_url="https://api.anthropic.com/v1", api_key_env="ANTHROPIC_API_KEY",
+        default_api_model="claude-opus-4-8", send_temperature=False,  # temp deprecated
+    ),
+    ModelSpec(
+        "frontier-sonnet", "frontier", served_by="api",
+        base_url="https://api.anthropic.com/v1", api_key_env="ANTHROPIC_API_KEY",
+        default_api_model="claude-sonnet-5", send_temperature=False,
     ),
     ModelSpec(
         "frontier-gemini", "frontier", served_by="api",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-        api_key_env="GEMINI_API_KEY", default_api_model="gemini-2.5-pro",
+        api_key_env="GOOGLE_API_KEY", default_api_model="gemini-3.1-pro-preview",
     ),
 ]
 

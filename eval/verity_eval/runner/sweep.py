@@ -98,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         # OpenAI-compatible endpoint + key). For API anchors the concrete model id
         # comes from FRONTIER_<SLUG>_MODEL, else the spec's default.
         api_key: str | None = None
+        client_kw: dict[str, Any] = {}
         if spec.served_by == "api":
             slug_env = spec.id.rsplit("-", 1)[-1].upper()  # frontier-gpt -> GPT
             api_model = os.environ.get(f"FRONTIER_{slug_env}_MODEL", spec.default_api_model)
@@ -108,9 +109,16 @@ def main(argv: list[str] | None = None) -> int:
             model = replace(spec, id=api_model)
             base_url, eng = spec.base_url, spec.base_url
             conc = min(args.concurrency, 8)  # be gentle on API rate limits
+            tc_choice = "auto"  # Anthropic rejects "required"; frontier tool-calls under auto
+            client_kw = {
+                "max_tokens_param": spec.max_tokens_param,
+                "send_temperature": spec.send_temperature,
+                "extra_body": json.loads(spec.extra_body_json) if spec.extra_body_json else None,
+            }
         else:
             model = spec
             base_url, eng, conc = args.base_url, engine_version, args.concurrency
+            tc_choice = args.tool_choice
 
         slug = model.id.replace("/", "__")
         if args.resume and (out_dir / f"{slug}.jsonl").is_file():
@@ -120,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = build_manifest(
             model, corpus_version=corpus_version, engine_version=eng, seed=args.seed,
             temperature=args.temperature, max_tokens=args.max_tokens,
-            max_steps=args.max_steps, guided_decoding=f"tool_choice={args.tool_choice}",
+            max_steps=args.max_steps, guided_decoding=f"tool_choice={tc_choice}",
         )
         if not manifest.is_complete():
             incomplete += 1
@@ -133,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
             client = VLLMClient(
                 model=model.id, base_url=base_url,
                 temperature=args.temperature, max_tokens=args.max_tokens,
-                tool_choice=args.tool_choice, api_key=api_key,
+                tool_choice=tc_choice, api_key=api_key, **client_kw,
             )
         print(f"[sweep] {model.id} ({model.served_by}, engine={eng}, concurrency={conc})")
         jsonl = run_model(

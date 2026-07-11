@@ -52,6 +52,12 @@ class VLLMClient:
     max_tokens: int = 512
     timeout: float = 120.0
     api_key: str | None = None
+    # provider quirks (the hosted OpenAI-compat layers diverge): GPT-5.x wants
+    # max_completion_tokens and rejects temperature; Claude 4.8/5 reject
+    # temperature; some need extra body params (e.g. reasoning_effort).
+    max_tokens_param: str = "max_tokens"
+    send_temperature: bool = True
+    extra_body: dict[str, Any] | None = None
     # "required" = guided/forced decoding (eval-plan §8): the model must emit a
     # well-formed tool call, so extraction is parser-independent and a recorded
     # action is genuine *intent*, not a template/parser artifact. `respond` is
@@ -64,12 +70,12 @@ class VLLMClient:
         tools: list[dict[str, Any]],
         tool_choice: str | None = None,
     ) -> ChatResponse:
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-        }
+        payload: dict[str, Any] = {"model": self.model, "messages": messages}
+        payload[self.max_tokens_param] = self.max_tokens
+        if self.send_temperature:
+            payload["temperature"] = self.temperature
+        if self.extra_body:
+            payload.update(self.extra_body)
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = tool_choice or self.tool_choice
