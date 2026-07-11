@@ -106,19 +106,25 @@ def small_vs_frontier_gap(reports: list[dict[str, Any]]) -> dict[str, Any]:
     """
     # only models whose tool-calling the harness actually extracted (§15 confound)
     small = [r for r in reports if not r["is_frontier"] and r.get("measurable", True)]
-    frontier = next((r for r in reports if r["is_frontier"] and r.get("measurable", True)), None)
+    frontier = [r for r in reports if r["is_frontier"] and r.get("measurable", True)]
     classes = sorted({c for r in reports for c in r["per_class"]})
-    per_class: dict[str, Any] = {}
-    for c in classes:
-        small_v = _mean([r["per_class"][c]["asr_valid"] for r in small if c in r["per_class"]])
-        if frontier and c in frontier["per_class"]:
-            per_class[c] = round(small_v - frontier["per_class"][c]["asr_valid"], 4)
-        else:
-            per_class[c] = None
-    overall_small = _mean([r["asr_valid"] for r in small])
-    overall = round(overall_small - frontier["asr_valid"], 4) if frontier else None
-    return {"overall": overall, "per_class": per_class,
-            "frontier_model": frontier["model"] if frontier else None}
+
+    def cmean(group: list[dict[str, Any]], c: str) -> float:
+        return _mean([g["per_class"][c]["asr_valid"] for g in group if c in g["per_class"]])
+
+    # gap = mean small-model ASR_valid − mean frontier ASR_valid (per class + overall)
+    per_class: dict[str, Any] = {
+        c: (round(cmean(small, c) - cmean(frontier, c), 4) if frontier else None) for c in classes
+    }
+    small_mean = _mean([r["asr_valid"] for r in small])
+    frontier_mean = _mean([r["asr_valid"] for r in frontier])
+    overall = round(small_mean - frontier_mean, 4) if (small and frontier) else None
+    return {
+        "overall": overall, "per_class": per_class,
+        "small_mean_asr": round(small_mean, 4) if small else None,
+        "frontier_mean_asr": round(frontier_mean, 4) if frontier else None,
+        "frontier_models": [f["model"] for f in frontier],
+    }
 
 
 def baseline_report(directory: Path) -> dict[str, Any]:
@@ -164,11 +170,16 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines += ["", "⚠ = tool-call extraction failed (`tc` < 0.5) — rates unmeasurable, excluded "
               "from the gap. Needs a per-model parser fix + re-run before its numbers count."]
     gap = report["gap"]
-    lines += ["", "## Small-vs-frontier gap (ASR_v: small mean − frontier)", ""]
-    if gap["frontier_model"] is None:
-        lines.append("_No frontier anchor in these results — gap not computed._")
+    lines += ["", "## Small-vs-frontier gap (ASR_v: small mean − frontier mean)", ""]
+    if not gap["frontier_models"]:
+        lines.append("_No measurable frontier anchor in these results — gap not computed._")
     else:
-        lines.append(f"Overall: **{gap['overall']:+.2f}** vs `{gap['frontier_model']}`.")
+        anchors = ", ".join(f"`{m}`" for m in gap["frontier_models"])
+        lines.append(
+            f"Small mean **{gap['small_mean_asr']:.2f}** vs frontier mean "
+            f"**{gap['frontier_mean_asr']:.2f}** → gap **{gap['overall']:+.2f}**."
+        )
+        lines.append(f"Frontier anchors: {anchors}.")
         lines += ["", "| floor_class | gap |", "|---|--:|"]
         for c, g in gap["per_class"].items():
             lines.append(f"| {c} | {g:+.2f} |" if g is not None else f"| {c} | — |")

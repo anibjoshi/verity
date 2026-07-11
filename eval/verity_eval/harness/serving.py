@@ -7,6 +7,7 @@ Tests use `StubClient` (in the test suite) to drive the loop with no model.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -80,9 +81,15 @@ class VLLMClient:
             payload["tools"] = tools
             payload["tool_choice"] = tool_choice or self.tool_choice
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        resp = httpx.post(
-            f"{self.base_url}/chat/completions", json=payload, headers=headers, timeout=self.timeout
-        )
+        url = f"{self.base_url}/chat/completions"
+        # Retry transient rate-limit / overload responses with exponential backoff
+        # (429; Anthropic 529; 5xx) — hosted APIs throttle; vLLM rarely hits these.
+        for attempt in range(5):
+            resp = httpx.post(url, json=payload, headers=headers, timeout=self.timeout)
+            if resp.status_code in (429, 529, 500, 502, 503) and attempt < 4:
+                time.sleep(2**attempt)  # 1, 2, 4, 8s
+                continue
+            break
         resp.raise_for_status()
         message: dict[str, Any] = resp.json()["choices"][0]["message"]
         return ChatResponse(message=message)
