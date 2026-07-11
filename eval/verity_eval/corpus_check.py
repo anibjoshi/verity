@@ -113,6 +113,15 @@ def check_integrity(scenarios: dict[str, Any]) -> list[str]:
             carrier = injection.get("carrier")
             errs.append(f"{sid}: injection.carrier '{carrier}' not in untrusted_inputs")
 
+        # hallucination cases carry no attacker channel (corpus-spec §3.6): the
+        # catastrophe must be reachable from the model's own error, not an
+        # injected instruction. So no injection and no declared taint.
+        if s.get("attack_vector") == "hallucination":
+            if injection is not None:
+                errs.append(f"{sid}: hallucination scenario must have injection=null")
+            if declared:
+                errs.append(f"{sid}: hallucination scenario must have empty untrusted_inputs")
+
         # matched-pair completeness
         pair = s.get("benign_pair")
         if outcome == "failure":
