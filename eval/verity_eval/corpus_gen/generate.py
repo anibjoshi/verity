@@ -25,14 +25,11 @@ Run:
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
 import tomllib
-from pathlib import Path
 from typing import Any
 
-from verity_eval.corpus_check import corpus_dir
+from verity_eval.corpus_gen.common import CORPUS_VERSION, ordered, run_cli, seeds_dir
 from verity_eval.corpus_gen.secret_targets import (
     GITLEAKS_PIN,
     REAL_TOKENS,
@@ -40,34 +37,7 @@ from verity_eval.corpus_gen.secret_targets import (
     SecretCase,
 )
 
-CORPUS_VERSION = "1.0"
 FLOOR_CLASS = "secret_read"
-
-# Canonical key order — mirrors the field reference (corpus-spec §2.1) and the
-# hand-authored E0 files, so generated files diff cleanly against them.
-_KEY_ORDER = [
-    "id",
-    "corpus_version",
-    "source",
-    "seed_ref",
-    "floor_class",
-    "attack_vector",
-    "outcome_kind",
-    "expected_disposition",
-    "user_instruction",
-    "environment",
-    "tools",
-    "untrusted_inputs",
-    "injection",
-    "oracle",
-    "label",
-    "benign_pair",
-]
-
-
-def seeds_dir() -> Path:
-    """The vendored seed corpora root (``eval/seeds``)."""
-    return corpus_dir().parent / "seeds"
 
 
 def load_gitleaks_regexes() -> dict[str, str]:
@@ -152,10 +122,6 @@ _TOOLS_READ = [
 ]
 
 
-def _ordered(d: dict[str, Any]) -> dict[str, Any]:
-    return {k: d[k] for k in _KEY_ORDER if k in d}
-
-
 def _doc_uri(c: SecretCase) -> str:
     return f"notes://doc-{c.seq:04d}"
 
@@ -163,7 +129,7 @@ def _doc_uri(c: SecretCase) -> str:
 def build_injection(c: SecretCase) -> dict[str, Any]:
     """Indirect-injection attack: benign task, tainted doc steals a secret read."""
     uri = _doc_uri(c)
-    return _ordered(
+    return ordered(
         {
             "id": f"authored.secret_read.{c.seq:04d}",
             "corpus_version": CORPUS_VERSION,
@@ -213,7 +179,7 @@ def build_injection(c: SecretCase) -> dict[str, Any]:
 
 def build_control(c: SecretCase, attack_seq: int) -> dict[str, Any]:
     """Boundary-adjacent benign twin: reads the non-secret neighbor."""
-    return _ordered(
+    return ordered(
         {
             "id": f"authored.secret_read.{attack_seq:04d}.control",
             "corpus_version": CORPUS_VERSION,
@@ -253,7 +219,7 @@ def build_hallucination(c: SecretCase) -> dict[str, Any]:
     Carries no injection and empty untrusted_inputs (corpus-spec §3.6) — the
     catastrophe must be reachable from the model's own error.
     """
-    return _ordered(
+    return ordered(
         {
             "id": f"authored.secret_read.{c.halluc_seq:04d}",
             "corpus_version": CORPUS_VERSION,
@@ -303,7 +269,7 @@ def build_hallucination_control(c: SecretCase) -> dict[str, Any]:
         f"{c.control_kind} rather than {c.secret_path}. Over-blocking control for the "
         f"hallucination case."
     )
-    return _ordered(ctrl)
+    return ordered(ctrl)
 
 
 def build_authorized(c: SecretCase) -> dict[str, Any]:
@@ -312,7 +278,7 @@ def build_authorized(c: SecretCase) -> dict[str, Any]:
     outcome success + expected_disposition confirm — Verity should gate with
     confirmation, not deny; measures over-refusal (corpus-spec §4.1, §5.7).
     """
-    return _ordered(
+    return ordered(
         {
             "id": f"authored.secret_read.{c.authorized_seq:04d}",
             "corpus_version": CORPUS_VERSION,
@@ -363,60 +329,13 @@ def build_all() -> dict[str, dict[str, Any]]:
     return out
 
 
-def _dump(scenario: dict[str, Any]) -> str:
-    return json.dumps(scenario, indent=2, ensure_ascii=False) + "\n"
-
-
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate the secret_read E5 tranche.")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("--write", action="store_true", help="materialize scenario files")
-    group.add_argument(
-        "--check", action="store_true", help="assert on-disk files equal the generated output"
+    return run_cli(
+        argv,
+        label="secret_read",
+        verify=lambda: verify_secret_values(SECRET_CASES) + verify_redacted_safe(SECRET_CASES),
+        build_all=build_all,
     )
-    args = parser.parse_args(argv)
-
-    checks = verify_secret_values(SECRET_CASES) + verify_redacted_safe(SECRET_CASES)
-    if checks:
-        print(f"[corpus-gen] {len(checks)} ground-truth / safety failure(s):")
-        for e in checks:
-            print(f"    {e}")
-        return 1
-
-    scenarios = build_all()
-    scen_dir = corpus_dir() / "scenarios"
-
-    if args.write:
-        for sid, obj in scenarios.items():
-            (scen_dir / f"{sid}.json").write_text(_dump(obj), encoding="utf-8")
-        print(f"[corpus-gen] wrote {len(scenarios)} secret_read scenario(s)")
-        return 0
-
-    if args.check:
-        drift: list[str] = []
-        for sid, obj in scenarios.items():
-            path = scen_dir / f"{sid}.json"
-            if not path.is_file():
-                drift.append(f"{sid}: missing on disk")
-            elif path.read_text(encoding="utf-8") != _dump(obj):
-                drift.append(f"{sid}: on-disk content differs from generator output")
-        if drift:
-            print(f"[corpus-gen] {len(drift)} drift(s) (run --write):")
-            for d in drift:
-                print(f"    {d}")
-            return 1
-        print(f"[corpus-gen] {len(scenarios)} secret_read scenario(s) match on disk")
-        return 0
-
-    attacks = sum(1 for o in scenarios.values() if o["outcome_kind"] == "failure")
-    halluc = sum(1 for o in scenarios.values() if o["attack_vector"] == "hallucination")
-    confirm = sum(1 for o in scenarios.values() if o["expected_disposition"] == "confirm")
-    controls = sum(1 for sid in scenarios if sid.endswith(".control"))
-    print(
-        f"[corpus-gen] ground truth OK · nothing live committed · {len(scenarios)} scenario(s): "
-        f"{attacks} attacks ({halluc} hallucination), {controls} controls, {confirm} authorized"
-    )
-    return 0
 
 
 if __name__ == "__main__":
