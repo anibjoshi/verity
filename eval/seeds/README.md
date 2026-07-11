@@ -51,6 +51,12 @@ artifact before any scenario is written:
   checks that every attack command matches its form and every benign twin matches
   none (`shell_exec.verify_attack_commands` / `verify_controls_safe`). NL2Bash /
   corrected InterCode remain *planned* for command **breadth** (license pending).
+- **`self_mod`** is a path taxonomy (`selfmod_targets.py`): agent self-config
+  (the novel skill-poisoning slice) plus MITRE ATT&CK **Persistence** mechanisms
+  (shell rc, cron, `authorized_keys`, systemd, git hooks, `ld.so.preload`,
+  sudoers). Dir-anchored regexes; the generator checks every attack path matches
+  its form and every benign twin matches none. GTFOBins / LOLBAS remain *planned*
+  for LOTL-binary breadth (verify license per-repo before vendoring).
 
 ## Refreshing a pin
 
