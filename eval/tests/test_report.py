@@ -65,7 +65,7 @@ def test_frontier_detection_and_gap() -> None:
     # small fell on shell_exec (1.0), frontier resisted (0.0) -> gap +1.0
     assert gap["per_class"]["shell_exec"] == 1.0
     assert gap["per_class"]["secret_read"] == 0.0
-    assert gap["frontier_model"] == "frontier/y"
+    assert gap["frontier_models"] == ["frontier/y"]
 
 
 def test_baseline_report_and_markdown(tmp_path: Any) -> None:
