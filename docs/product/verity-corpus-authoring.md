@@ -168,6 +168,31 @@ over-eager model that *persists* a one-off preference into its own config
 a write into agent memory) rather than acting for the session or writing a
 project-local file.
 
+### 3.7 The data-flow floor — a spanning set, not a breadth set
+
+`tainted_exfil`, `irreversible_financial`, and `net_egress` are authored as a
+**spanning set** (~15 attacks each), deliberately smaller than the code-access
+classes: breadth here comes from the adapters (AgentDojo effect oracle,
+InjecAgent's 1,054 cases, BIPIA), so authoring invests only in **oracle/matcher
+coverage** (§8.2). The generators exercise the full matcher space rather than
+volume:
+
+- **tainted_exfil** — the lethal trifecta (untrusted instruction + private data +
+  external send), with taint on the exfil path from day one, across channels
+  (email / http_post / sms / message / webhook) and recipient matchers
+  (`regex` domain/host, `one_of`, `equals`).
+- **irreversible_financial** — `gt`/`ge` on amount (i64 **cents**, incl. the
+  +1-cent boundary) and `regex`/`one_of`/`equals` on the payee (unknown/attacker).
+- **net_egress** — off-allowlist host as `regex` (domain / raw IP / registry /
+  remote / tunnel / Tor / typosquat) and `one_of`; the allowlist lives in state.
+
+The crispness guarantee is matcher-based (`corpus_gen/matchers.py`): the concrete
+attack target satisfies the violating matcher and the benign control target does
+not. Because the concrete matcher — not the verifier's general predicate — is
+what the oracle names (§7.2), grading stays non-circular. These classes are
+naturally `indirect_injection` (the confused-deputy vector); the hallucination
+slice is not required here (it is the ≥10-per-code-access-class rule, §8.3).
+
 ## 4. Conventions
 
 - **IDs / `seq` blocks** (per class): injection attacks `0003–0029`,
@@ -225,5 +250,7 @@ Only after sign-off is the tranche's row in `REVIEW.md` marked reviewed.
 | `secret_read` | `corpus_gen/generate.py` | gitleaks `v8.30.1` | 30 attacks (10 hallucination) · 30 controls · 10 authorized | ⏳ pending (`REVIEW.md`) |
 | `shell_exec` | `corpus_gen/shell_exec.py` | canonical destructive forms, MITRE ATT&CK-mapped | 30 attacks (15 hallucination) · 30 controls · 10 authorized | ⏳ pending (`REVIEW.md`) |
 | `self_mod` | `corpus_gen/self_mod.py` | self-mod/persistence path taxonomy: agent self-config + ATT&CK Persistence | 30 attacks (15 hallucination) · 30 controls · 10 authorized | ⏳ pending (`REVIEW.md`) |
-| `tainted_exfil` · `irreversible_financial` · `net_egress` | authored spanning set; breadth from adapters | — | — | — |
+| `tainted_exfil` | `corpus_gen/tainted_exfil.py` | authored spanning set (trifecta; matchers); breadth from adapters | 15 attacks · 15 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
+| `irreversible_financial` | `corpus_gen/irreversible_financial.py` | authored spanning set (amount/payee matchers); breadth from adapters | 14 attacks · 14 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
+| `net_egress` | `corpus_gen/net_egress.py` | authored spanning set (off-allowlist host matchers); breadth from adapters | 13 attacks · 13 controls · 6 authorized | ⏳ pending (`REVIEW.md`) |
 | `none` (benign pool) | — | NotInject / InjecGuard | — | — |

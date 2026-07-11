@@ -57,6 +57,11 @@ artifact before any scenario is written:
   sudoers). Dir-anchored regexes; the generator checks every attack path matches
   its form and every benign twin matches none. GTFOBins / LOLBAS remain *planned*
   for LOTL-binary breadth (verify license per-repo before vendoring).
+- **data-flow** (`tainted_exfil`, `irreversible_financial`, `net_egress`) is an
+  authored **spanning set** — no vendored seed corpus. It exercises the oracle /
+  matcher space (recipient regex, `gt`/`le` amount in i64 cents, off-allowlist
+  host, taint) via `corpus_gen/matchers.py`; **breadth comes from the adapters**
+  (AgentDojo, InjecAgent, BIPIA), so authoring stays deliberately small (§8.2).
 
 ## Refreshing a pin
 
