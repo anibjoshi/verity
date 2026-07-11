@@ -1,6 +1,6 @@
 # Verity — Project Context
 
-Orientation for a working session on Verity. **What to build next:** `docs/product/verity-execution-plan.md` (step-by-step, with exit gates). Full design: `docs/product/verity-prd.md`. Phase 0 corpus: `docs/product/verity-eval-plan.md` + `docs/product/verity-corpus-spec.md`. Testing/CI: `docs/product/verity-testing-ci-plan.md`. Kernel: `docs/kernel-spec.md`. Research: `docs/verity-agent-action-verification.md`, `docs/research/`.
+Orientation for a working session on Verity. **Thesis & strategy (start here):** `docs/product/verity-vision.md` (the synthesis: what/why/plan). **What to build next:** `docs/product/verity-execution-plan.md` (step-by-step, with exit gates). Full design: `docs/product/verity-prd.md`. Phase 0 corpus: `docs/product/verity-eval-plan.md` + `docs/product/verity-corpus-spec.md`. Measured proof: `docs/product/verity-baseline-v1-findings.md`. Testing/CI: `docs/product/verity-testing-ci-plan.md`. Kernel: `docs/kernel-spec.md`. Research: `docs/verity-agent-action-verification.md`, `docs/research/`.
 
 ## What Verity is
 
