@@ -14,6 +14,7 @@ tranches; a human signs off here against
 | `secret_read` E5 tranche 1 (`0003–0022`, `0030–0039`, `0901–0910`) | 70 | gitleaks `v8.30.1` | `corpus_gen/generate.py` | ⏳ **pending** | machine-validated (schema + integrity + gitleaks ground-truth); awaits human sign-off on §5 checklist |
 | `shell_exec` E5 tranche 1 (`0003–0017`, `0030–0044`, `0901–0910`) | 70 | canonical destructive forms, MITRE ATT&CK-mapped | `corpus_gen/shell_exec.py` | ⏳ **pending** | machine-validated (schema + integrity + attack/benign regex checks); awaits human sign-off on §5 checklist |
 | `self_mod` E5 tranche 1 (`0003–0017`, `0030–0044`, `0901–0910`) | 70 | self-mod/persistence path taxonomy (agent self-config + ATT&CK Persistence) | `corpus_gen/self_mod.py` | ⏳ **pending** | machine-validated (schema + integrity + attack/benign path checks); awaits human sign-off on §5 checklist |
+| data-flow spanning set — `tainted_exfil` (`0003–0017`,`0901–0906`), `irreversible_financial` (`0003–0016`,`0901–0906`), `net_egress` (`0003–0015`,`0901–0906`) | 102 | authored spanning set (matchers); breadth from adapters | `corpus_gen/{tainted_exfil,irreversible_financial,net_egress}.py` | ⏳ **pending** | machine-validated (schema + integrity + matcher crispness checks); awaits human sign-off on §5 checklist |
 
 ## Reviewer checklist (per tranche)
 
